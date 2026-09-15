@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaBridge Capital</title>
+<style>
+:root{
+  --bg:#070807; --panel:#111311; --panel2:#171a17; --text:#f5f7f1;
+  --muted:#9da49a; --line:#2b3029; --accent:#c4f34a; --accent2:#e3f9a0;
+  --danger:#ff9d9d; --warning:#ffd98a; --shadow:0 24px 80px rgba(0,0,0,.38);
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(circle at 82% -5%,#29351c 0,transparent 25%),linear-gradient(180deg,#090a08 0,#070807 52%,#0b0d0a 100%);color:var(--text);font:15px/1.5 "Avenir Next","Segoe UI",sans-serif;letter-spacing:.01em}
+button,input,select{font:inherit} button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+.container{width:min(1160px,91%);margin:auto}
+.nav{height:78px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(7,16,14,.86);backdrop-filter:blur(18px)}
+.logo{font-weight:850;letter-spacing:.12em;font-size:15px}.logo span{color:var(--accent)}
+.navlinks{display:flex;gap:28px;color:#b8c9c0;font-size:13px;font-weight:650}.navlinks a{transition:color .2s}.navlinks a:hover{color:var(--accent)}
+.nav-actions{display:flex;gap:10px}.btn{border:1px solid var(--line);background:#102019;color:white;padding:11px 17px;border-radius:12px;font-weight:700}
+.btn:hover{transform:translateY(-1px);border-color:#657449}.btn.primary{background:var(--accent);color:#101408;border-color:var(--accent);box-shadow:0 8px 22px rgba(196,243,74,.14)}
+.btn.ghost{background:transparent}
+.hero{padding:78px 0 66px;display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;color:var(--accent);background:#10251b;border:1px solid #204432;border-radius:999px;padding:7px 11px;font-weight:800;font-size:12px}
+.dot{width:7px;height:7px;background:var(--accent);border-radius:50%;box-shadow:0 0 15px var(--accent)}
+h1{font-size:clamp(44px,5.7vw,74px);line-height:1;letter-spacing:-.055em;margin:19px 0;max-width:690px}
+.hero p{font-size:18px;color:#a9bdb3;max-width:650px}
+.hero-buttons{display:flex;gap:12px;margin-top:28px}
+.hero-note{font-size:12px!important;color:#71877d!important;margin-top:14px}
+.mock{background:linear-gradient(145deg,#1b2116,#0d0f0c);border:1px solid #46542e;border-radius:18px;padding:22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.mock:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(196,243,74,.07),transparent 65%);pointer-events:none}
+.mock-top{display:flex;justify-content:space-between;color:#92a99e;font-size:11px;font-weight:800;letter-spacing:.1em}
+.balance{font-size:39px;font-weight:850;letter-spacing:-.04em;margin:15px 0 4px}
+.up{color:var(--accent);font-weight:800}
+.chart{height:145px;margin:18px 0 10px;position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.chart svg{width:100%;height:100%}
+.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.mini{background:#0b1712;border:1px solid var(--line);padding:12px;border-radius:13px}.mini b{display:block;margin-top:4px}
+.section{padding:62px 0}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:25px;border-bottom:1px solid var(--line);padding-bottom:16px}
+.kicker{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.13em;font-weight:850}
+h2{font-size:36px;letter-spacing:-.045em;margin:7px 0}
+.muted{color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.card{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:21px}
+.card:hover{border-color:#345846;transform:translateY(-2px);transition:.2s}
+.icon{width:42px;height:42px;display:grid;place-items:center;background:#183024;border-radius:12px;font-size:20px}
+.card h3{margin:18px 0 6px;font-size:20px}.tag{display:inline-block;padding:4px 8px;border-radius:999px;background:#15291f;color:#9bd6b1;font-size:11px;font-weight:800}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{padding:23px;border:1px solid var(--line);border-radius:12px;background:#0b1612}.stat strong{font-size:28px;display:block;letter-spacing:-.03em}.stat span{color:var(--muted);font-size:13px}
+.calculator{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.calc,.portfolio{border:1px solid var(--line);border-radius:20px;background:#0c1713;padding:24px}
+label{display:block;color:#a6bbb0;font-size:13px;font-weight:700;margin:16px 0 7px}
+input,select{width:100%;padding:13px;border-radius:11px;border:1px solid var(--line);background:#07100d;color:white;outline:none}
+input:focus,select:focus{border-color:#4c8c68}
+.range{accent-color:var(--accent);padding:0}
+.result{margin-top:22px;padding:20px;border-radius:15px;background:#12241a;border:1px solid #254633}
+.result .big{font-size:37px;font-weight:850;letter-spacing:-.05em}
+.alloc{display:grid;grid-template-columns:150px 1fr;gap:25px;align-items:center}
+.donut{width:145px;height:145px;border-radius:50%;background:conic-gradient(var(--accent) 0 45%,#75a6ff 45% 70%,#d9ae66 70% 90%,#50635a 90%);display:grid;place-items:center}
+.donut:after{content:"Portfolio";width:90px;height:90px;border-radius:50%;background:#0c1713;display:grid;place-items:center;color:#a8bbb1;font-size:12px}
+.alloc-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:14px 9px;border-bottom:1px solid var(--line)}.table th{color:#789084;font-size:12px;text-transform:uppercase}
+.badge{font-size:11px;border-radius:999px;padding:5px 8px;background:#163022;color:#9be4b6}.risk{background:#2b2414;color:var(--warning)}
+.cta{padding:45px;border:1px solid #274737;border-radius:24px;background:radial-gradient(circle at 80% 10%,#173d29,transparent 40%),#0d1c15;display:flex;justify-content:space-between;align-items:center;gap:30px}
+footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:12px}
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal-back.show{display:flex}.modal{width:min(520px,100%);background:#0d1914;border:1px solid #315340;border-radius:20px;padding:25px;box-shadow:var(--shadow)}
+.modal-head{display:flex;justify-content:space-between}.close{background:none;border:0;color:#a7b9b0;font-size:25px}
+.notice{padding:12px;background:#211d10;color:#dccb9a;border:1px solid #4a4023;border-radius:11px;font-size:12px;margin-top:15px}
+.account-bar{display:none;align-items:center;justify-content:space-between;gap:18px;padding:15px 18px;border:1px solid #46542e;border-radius:14px;background:#151b10;margin:10px auto 0}
+.account-bar.show{display:flex}.account-bar strong{color:var(--accent2)}.account-bar .muted{font-size:13px}
+.wallet{padding:16px;border:1px solid #46542e;background:#11150d;border-radius:12px;word-break:break-all;font-family:monospace;color:var(--accent2)}
+.dashboard-view{display:none;padding:38px 0 10px}.logged-in .dashboard-view{display:block}.logged-in .marketing-section{display:none}.dashboard-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:24px}.dashboard-head h1{font-size:clamp(36px,5vw,58px);margin:8px 0 0}.dashboard-actions{display:flex;gap:10px}.dashboard-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:15px}.dashboard-card{background:linear-gradient(145deg,#13271d,#0c1813);border:1px solid #2a4b38;border-radius:14px;padding:23px}.dashboard-card h3{margin:0 0 10px;font-size:14px;color:#b6c9be}.dashboard-value{font-size:42px;letter-spacing:-.05em;font-weight:850}.dashboard-meta{display:flex;justify-content:space-between;gap:15px;margin-top:24px;padding-top:15px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}.dashboard-meta strong{display:block;color:var(--text);font-size:16px;margin-top:3px}.dashboard-list{display:grid;gap:13px;margin-top:16px}.dashboard-list div{display:flex;justify-content:space-between;color:var(--muted)}.dashboard-list b{color:var(--text)}
+.mobile-menu{display:none}
+@media(max-width:850px){
+ .navlinks{display:none}.mobile-menu{display:block}.hero{grid-template-columns:1fr;padding-top:55px}.mock{transform:none}
+ .cards,.stats{grid-template-columns:1fr 1fr}.calculator{grid-template-columns:1fr}.alloc{grid-template-columns:1fr}
+ .cta{display:block}.cta .btn{margin-top:15px}
+}
+@media(max-width:540px){.cards,.stats{grid-template-columns:1fr}.nav-actions .ghost{display:none}h1{font-size:48px}.hero-buttons{flex-direction:column}.hero-buttons .btn{width:100%}}
+</style>
+</head>
+<body>
+
+<header class="container nav">
+  <a class="logo" href="#">NOVA<span>BRIDGE</span></a>
+  <nav class="navlinks">
+    <a href="#opportunities">Products</a><a href="#calculator">Markets</a><a href="#portfolio">Portfolio</a><a href="#activity">Activity</a>
+  </nav>
+  <div class="nav-actions" id="authActions"><button class="btn ghost" onclick="openModal('login')">Log in</button><button class="btn primary" onclick="openModal('signup')">Get started</button></div>
+  <button class="btn mobile-menu" onclick="document.querySelector('.navlinks').style.display=document.querySelector('.navlinks').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<main>
+<section class="container hero marketing-section">
+ <div>
+  <span class="eyebrow"><span class="dot"></span> THE DIGITAL ASSET PLATFORM</span>
+  <h1>Professional infrastructure for digital-asset wealth.</h1>
+  <p>NovaBridge brings curated strategies, account-level visibility, and disciplined funding workflows into one experience for eligible participants.</p>
+  <div class="hero-buttons"><button class="btn primary" onclick="scrollToId('opportunities')">Review strategies →</button><button class="btn" onclick="openModal('learn')">How access works</button></div>
+  <p class="hero-note">Clear terms. Verified settlement. Account records you can review. Availability and risk vary by product and jurisdiction.</p>
+ </div>
+ <div class="mock">
+  <div class="mock-top"><span>ACCOUNT OVERVIEW</span><span>● SECURE SESSION</span></div>
+  <div class="balance" id="heroBalance">$0.00</div>
+  <div class="up">Available cash · USD</div>
+   <div class="chart">
+    <svg viewBox="0 0 500 150" preserveAspectRatio="none">
+      <defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-opacity=".28"/><stop offset="1" stop-opacity="0"/></linearGradient></defs>
+      <path d="M0 125 C45 115,55 130,90 103 S145 118,180 82 S220 95,250 69 S305 92,335 55 S390 71,420 35 S460 50,500 17 L500 150 L0 150Z" fill="url(#fill)"/>
+      <path d="M0 125 C45 115,55 130,90 103 S145 118,180 82 S220 95,250 69 S305 92,335 55 S390 71,420 35 S460 50,500 17" fill="none" stroke="currentColor" stroke-width="3"/>
+    </svg>
+   </div>
+  <div class="mini-grid"><div class="mini">Digital assets <b>Not allocated</b></div><div class="mini">Infrastructure <b>Not allocated</b></div><div class="mini">Private credit <b>Not allocated</b></div></div>
+ </div>
+</section>
+
+<section class="container account-bar" id="accountBar">
+ <div><div class="kicker">Authenticated account</div><strong id="accountName"></strong><span class="muted"> · dashboard is live</span></div>
+ <button class="btn ghost" onclick="logout()">Log out</button>
+</section>
+
+<section class="container dashboard-view" id="dashboardView">
+ <div class="dashboard-head"><div><div class="kicker">Professional account</div><h1 id="dashboardGreeting">Portfolio overview</h1><p class="muted">Review available cash, product access, funding requests, and account activity.</p></div><div class="dashboard-actions"><button class="btn" onclick="openFunding()">＋ Add funds</button><button class="btn primary" onclick="scrollToId('activity')">View activity</button></div></div>
+ <div class="dashboard-grid">
+  <article class="dashboard-card"><h3>Available cash</h3><div class="dashboard-value" id="dashboardBalance">$0.00</div><div class="dashboard-meta"><span>Account currency<strong>USD</strong></span><span>Account status<strong>Active</strong></span><span>Settlement<strong>Verified only</strong></span></div></article>
+  <article class="dashboard-card"><h3>Portfolio framework</h3><div class="dashboard-list"><div><span>Digital assets</span><b>45%</b></div><div><span>Infrastructure</span><b>25%</b></div><div><span>Private credit</span><b>20%</b></div><div><span>Cash reserve</span><b>10%</b></div></div><p class="muted">Reference allocation only. Verified live product data will appear after approval.</p></article>
+ </div>
+</section>
+
+<section class="container section marketing-section" id="opportunities">
+ <div class="section-head"><div><div class="kicker">A focused product set</div><h2>Choose where your capital fits</h2></div><span class="muted">Review terms before committing</span></div>
+ <div class="cards">
+  <article class="card"><div class="icon">₿</div><span class="tag">MARKET ACCESS</span><h3>Digital Asset Strategy</h3><p class="muted">Diversified exposure to major digital assets with portfolio-level risk controls and visible account activity.</p><button class="btn" onclick="openInvest('Digital Asset Strategy')">Review strategy</button></article>
+  <article class="card"><div class="icon">↗</div><span class="tag">PRIVATE MARKETS</span><h3>Short-Term Credit</h3><p class="muted">Qualifying short-duration credit opportunities with borrower, liquidity, and default risks made explicit.</p><button class="btn" onclick="openInvest('Short-Term Credit')">Review strategy</button></article>
+  <article class="card"><div class="icon">◈</div><span class="tag">REAL ECONOMY</span><h3>Mining Infrastructure</h3><p class="muted">Structured access to digital-asset infrastructure economics, subject to operating and market conditions.</p><button class="btn" onclick="openInvest('Mining Infrastructure')">Review strategy</button></article>
+ </div>
+</section>
+
+<section class="container section marketing-section">
+ <div class="stats">
+  <div class="stat"><strong>Clear</strong><span>Product terms before access</span></div><div class="stat"><strong>Secure</strong><span>Session-based account access</span></div><div class="stat"><strong>Verified</strong><span>Settlement before balances update</span></div><div class="stat"><strong>USD</strong><span>Account currency</span></div>
+ </div>
+</section>
+
+<section class="container section marketing-section" id="calculator">
+ <div class="section-head"><div><div class="kicker">Before you commit</div><h2>Model the decision</h2></div><span class="muted">Scenario planning, not a forecast</span></div>
+ <div class="calculator">
+  <div class="calc">
+   <label>Initial investment: <b id="amountLabel">$10,000</b></label>
+   <input id="amount" class="range" type="range" min="500" max="100000" step="500" value="10000" oninput="calculate()">
+  <label>Scenario rate</label>
+  <select id="rate" onchange="calculate()"><option value="0.001">0.10% weekly scenario</option><option value="0.004" selected>0.40% monthly scenario</option><option value="0.05">5% annual scenario</option><option value="0.10">10% annual scenario</option></select>
+   <label>Scenario period</label>
+   <select id="years" onchange="calculate()"><option value="1">1 period</option><option value="3" selected>3 periods</option><option value="6">6 periods</option><option value="12">12 periods</option></select>
+  <div class="result"><div class="muted">Illustrative value</div><div class="big" id="ending">$13,310</div><div class="up" id="gain">+$3,310 at selected rate</div></div>
+  <div class="notice">Illustrative mathematics only. Weekly, monthly, and annual rates shown here are scenarios, not offered or promised returns. Actual results may be lower, including a total loss of capital.</div>
+  </div>
+  <div class="portfolio" id="portfolio">
+  <div class="kicker">Portfolio framework</div><h2>Balanced digital</h2><p class="muted">Reference allocation for comparing exposure, liquidity, and risk. Live product data appears only after verification.</p>
+   <div class="alloc"><div class="donut"></div><div><div class="alloc-row"><span>Digital assets</span><b>45%</b></div><div class="alloc-row"><span>Mining</span><b>25%</b></div><div class="alloc-row"><span>Private credit</span><b>20%</b></div><div class="alloc-row"><span>Cash</span><b>10%</b></div></div></div>
+  </div>
+ </div>
+</section>
+
+<section class="container section" id="activity">
+ <div class="section-head"><div><div class="kicker">Dashboard</div><h2>Recent activity</h2></div><button class="btn" onclick="openFunding()">＋ Add funds</button></div>
+ <div class="card" style="overflow:auto">
+ <table class="table"><thead><tr><th>Activity</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+
+ </tbody></table>
+ </div>
+</section>
+
+<section class="container section marketing-section">
+ <div class="cta"><div><div class="kicker">Your next step</div><h2>Review. Qualify. Allocate with intent.</h2><p class="muted">Create an account, review the available terms, complete eligibility checks, and fund only after the receiving details are verified.</p></div><button class="btn primary" onclick="openModal('signup')">Open an account →</button></div>
+</section>
+</main>
+
+<footer><div class="container">
+ <b>NOVABRIDGE CAPITAL</b><p>NovaBridge Capital provides an account interface for managing eligible opportunities. Nothing on this site constitutes a guarantee of investment performance. Availability of products and services is subject to applicable law, eligibility and required disclosures.</p><p><a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a> · <a href="/risk-disclosures.html">Risk disclosures</a> · <a href="/fees.html">Fees</a> · <a href="/withdrawals.html">Withdrawals</a></p>
+ <p>Crypto assets can be highly volatile and may result in partial or total loss. Private credit carries borrower, liquidity and default risks.</p>
+ <p>© 2026 NovaBridge Capital</p>
+</div></footer>
+
+<div class="modal-back" id="modalBack" onclick="if(event.target===this)closeModal()">
+ <div class="modal">
+  <div class="modal-head"><div><div class="kicker" id="modalKicker">NOVA BRIDGE</div><h2 id="modalTitle">Welcome</h2></div><button class="close" onclick="closeModal()">×</button></div>
+  <div id="modalBody"></div>
+ </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>'$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let currentUser=null, fundingAfterLogin=false;
+const CRYPTO_WALLET_ADDRESS='';
+async function api(url,opt={}){const r=await fetch(url,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Request failed');return d}
+function calculate(){const a=+$('amount').value,r=+$('rate').value,y=+$('years').value,e=a*Math.pow(1+r,y);$('amountLabel').textContent='$'+a.toLocaleString();$('ending').textContent='$'+Math.round(e).toLocaleString();$('gain').textContent='+$'+Math.round(e-a).toLocaleString()+' at selected scenario rate'}
+function scrollToId(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})}
+function closeModal(){$('modalBack').classList.remove('show')}
+function openModal(type){
+const d={
+login:['ACCOUNT','Log in',`<p class="muted">Access your NovaBridge account.</p><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com"><label>Password</label><input id="loginPassword" type="password" placeholder="••••••••"><button class="btn primary" style="width:100%;margin-top:18px" onclick="login()">Log in</button><button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModal('resetRequest')">Forgot password?</button><div id="modalMsg"></div>`],
+signup:['ACCOUNT','Create your account',`<p class="muted">Create your NovaBridge account and access your portfolio.</p><label>Full name</label><input id="signupName" placeholder="Alex Morgan"><label>Email</label><input id="signupEmail" type="email" placeholder="you@example.com"><label>Password</label><input id="signupPassword" type="password" placeholder="At least 8 characters"><button class="btn primary" style="width:100%;margin-top:18px" onclick="register()">Create account</button><div id="modalMsg"></div>`],
+learn:['HOW ACCESS WORKS','A considered process',`<div class="card"><b>01 — Review</b><p class="muted">Compare the mandate, terms, liquidity profile, and risks of each strategy.</p><b>02 — Qualify</b><p class="muted">Create an account and complete the eligibility checks that apply to your jurisdiction.</p><b>03 — Fund</b><p class="muted">Verify the receiving details before submitting a funding request.</p><b>04 — Monitor</b><p class="muted">Track available cash, requests, and account activity from your dashboard.</p></div><div class="notice">Access is subject to eligibility, applicable law, product availability, and required disclosures.</div>`],
+resetRequest:['ACCOUNT SECURITY','Reset your password',`<p class="muted">Enter your account email. If it exists, we will send reset instructions.</p><label>Email</label><input id="resetEmail" type="email" placeholder="you@example.com"><button class="btn primary" style="width:100%;margin-top:18px" onclick="requestPasswordReset()">Send reset link</button><div id="modalMsg"></div>`],
+deposit:['FUNDING','Fund your account',`<p class="muted">Choose the amount you intend to fund. You will receive the configured wallet address on the next step.</p><label>Amount (USD)</label><input id="fundingAmount" type="number" value="5000" min="100"><button class="btn primary" style="width:100%;margin-top:18px" onclick="showWalletStep()">Continue</button><div id="modalMsg"></div>`]};
+const x=d[type]||d.learn;$('modalKicker').textContent=x[0];$('modalTitle').textContent=x[1];$('modalBody').innerHTML=x[2];$('modalBack').classList.add('show')}
+function updateAuthUi(){const actions=$('authActions');document.body.classList.toggle('logged-in',Boolean(currentUser));if(currentUser){$('accountName').textContent=currentUser.name;$('dashboardGreeting').textContent='Welcome, '+currentUser.name;$('accountBar').classList.add('show');actions.innerHTML='<button class="btn ghost" onclick="scrollToId(\'activity\')">Dashboard</button><button class="btn primary" onclick="openFunding()">Add funds</button>'}else{$('accountBar').classList.remove('show');actions.innerHTML='<button class="btn ghost" onclick="openModal(\'login\')">Log in</button><button class="btn primary" onclick="openModal(\'signup\')">Get started</button>'}}
+function openFunding(){if(!currentUser){fundingAfterLogin=true;openModal('login');return}openModal('deposit')}
+function showWalletStep(){const amount=+$('fundingAmount').value;if(!Number.isFinite(amount)||amount<100){$('modalMsg').innerHTML='<div class="notice">Enter an amount of at least $100.</div>';return}$('modalKicker').textContent='FUNDING';$('modalTitle').textContent='Wallet address';$('modalBody').innerHTML=CRYPTO_WALLET_ADDRESS?`<p class="muted">Send exactly the requested amount using the supported network below.</p><div class="wallet">${esc(CRYPTO_WALLET_ADDRESS)}</div><div class="notice">Only send funds after checking the network and address. Your balance updates after verified settlement.</div>`:'<p class="muted">Your account is ready for funding, but the receiving wallet has not been configured yet.</p><div class="wallet">Wallet address pending configuration</div><div class="notice">No funds should be sent until the wallet address and supported network are displayed here.</div>'}
+async function register(){try{let d=await api('/api/register',{method:'POST',body:JSON.stringify({name:$('signupName').value,email:$('signupEmail').value,password:$('signupPassword').value})});currentUser=d.user;updateAuthUi();closeModal();await loadDashboard();toast('Welcome, '+d.user.name+'.');if(fundingAfterLogin){fundingAfterLogin=false;openModal('deposit')}}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function login(){try{let d=await api('/api/login',{method:'POST',body:JSON.stringify({email:$('loginEmail').value,password:$('loginPassword').value})});currentUser=d.user;updateAuthUi();closeModal();await loadDashboard();toast('Welcome back, '+d.user.name+'.');if(fundingAfterLogin){fundingAfterLogin=false;openModal('deposit')}}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function loadDashboard(){const d=await api('/api/dashboard');const balance=money(d.portfolio.cash);$('heroBalance').textContent=balance;$('dashboardBalance').textContent=balance;document.querySelector('#activity tbody').innerHTML=d.activities.length?d.activities.map(a=>`<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join(''):`<tr><td colspan="4" class="muted">No activity yet. Fund your account to begin.</td></tr>`}
+async function loadSession(){try{const d=await api('/api/me');if(!d.authenticated){currentUser=null;updateAuthUi();return}currentUser=d.user;updateAuthUi();await loadDashboard()}catch(_){currentUser=null;updateAuthUi()}}
+async function logout(){await api('/api/logout',{method:'POST'});currentUser=null;$('heroBalance').textContent='$0.00';$('dashboardBalance').textContent='$0.00';document.querySelector('#activity tbody').innerHTML='';updateAuthUi();toast('You have been logged out.')}
+async function requestFunding(){try{await api('/api/funding-request',{method:'POST',body:JSON.stringify({amount:+$('fundingAmount').value})});closeModal();await loadDashboard();toast('Funding request submitted.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function requestPasswordReset(){try{const d=await api('/api/password-reset/request',{method:'POST',body:JSON.stringify({email:$('resetEmail').value})});$('modalMsg').innerHTML='<div class="notice">'+esc(d.message)+(d.developmentResetUrl?' <a href="'+esc(d.developmentResetUrl)+'">Open development reset link</a>':'')+'</div>'}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+function openInvest(name){$('modalKicker').textContent='OPPORTUNITY';$('modalTitle').textContent=name;$('modalBody').innerHTML=`<p class="muted">Review the opportunity before submitting an allocation request.</p><label>Allocation amount</label><input id="investAmt" type="number" value="2500" min="100"><div class="notice">Allocations are subject to availability, eligibility, risk review and applicable terms.</div><button class="btn primary" style="width:100%;margin-top:18px" onclick="allocate('${esc(name)}')">Submit allocation</button><div id="modalMsg"></div>`;$('modalBack').classList.add('show')}
+async function allocate(name){try{await api('/api/allocation',{method:'POST',body:JSON.stringify({name,amount:+$('investAmt').value})});closeModal();await loadDashboard();toast('Allocation submitted.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+function toast(m){let t=document.createElement('div');t.textContent=m;t.style='position:fixed;right:20px;bottom:20px;z-index:50;background:#163022;color:#b9ffd2;border:1px solid #345846;padding:14px 18px;border-radius:12px;font-weight:700';document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+calculate();loadSession();
+</script>
+</body>
+</html>

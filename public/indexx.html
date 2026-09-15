@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaBridge Capital — Interactive Prototype</title>
+<style>
+:root{
+  --bg:#07100d; --panel:#0d1814; --panel2:#101f19; --text:#edf7f1;
+  --muted:#8ea79a; --line:#1d3329; --accent:#7df0ad; --accent2:#b9ffd2;
+  --danger:#ff9d9d; --warning:#ffd98a; --shadow:0 20px 70px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(circle at 85% 0%,#153528 0,transparent 32%),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select{font:inherit} button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+.container{width:min(1180px,92%);margin:auto}
+.nav{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.logo{font-weight:850;letter-spacing:-.04em;font-size:21px}.logo span{color:var(--accent)}
+.navlinks{display:flex;gap:25px;color:#b8c9c0}.navlinks a:hover{color:white}
+.nav-actions{display:flex;gap:10px}.btn{border:1px solid var(--line);background:#102019;color:white;padding:11px 17px;border-radius:12px;font-weight:700}
+.btn:hover{transform:translateY(-1px);border-color:#345846}.btn.primary{background:var(--accent);color:#06110b;border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.hero{padding:82px 0 58px;display:grid;grid-template-columns:1.15fr .85fr;gap:50px;align-items:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;color:var(--accent);background:#10251b;border:1px solid #204432;border-radius:999px;padding:7px 11px;font-weight:800;font-size:12px}
+.dot{width:7px;height:7px;background:var(--accent);border-radius:50%;box-shadow:0 0 15px var(--accent)}
+h1{font-size:clamp(44px,6vw,78px);line-height:.98;letter-spacing:-.065em;margin:19px 0}
+.hero p{font-size:18px;color:#a9bdb3;max-width:650px}
+.hero-buttons{display:flex;gap:12px;margin-top:28px}
+.hero-note{font-size:12px!important;color:#71877d!important;margin-top:14px}
+.mock{background:linear-gradient(145deg,#12231b,#09120f);border:1px solid #284438;border-radius:24px;padding:20px;box-shadow:var(--shadow);transform:rotate(1deg)}
+.mock-top{display:flex;justify-content:space-between;color:#92a99e;font-size:12px}
+.balance{font-size:39px;font-weight:850;letter-spacing:-.04em;margin:15px 0 4px}
+.up{color:var(--accent);font-weight:800}
+.chart{height:145px;margin:18px 0 10px;position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.chart svg{width:100%;height:100%}
+.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.mini{background:#0b1712;border:1px solid var(--line);padding:12px;border-radius:13px}.mini b{display:block;margin-top:4px}
+.section{padding:65px 0}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:25px}
+.kicker{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.13em;font-weight:850}
+h2{font-size:38px;letter-spacing:-.045em;margin:7px 0}
+.muted{color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.card{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:21px}
+.card:hover{border-color:#345846;transform:translateY(-2px);transition:.2s}
+.icon{width:42px;height:42px;display:grid;place-items:center;background:#183024;border-radius:12px;font-size:20px}
+.card h3{margin:18px 0 6px;font-size:20px}.tag{display:inline-block;padding:4px 8px;border-radius:999px;background:#15291f;color:#9bd6b1;font-size:11px;font-weight:800}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{padding:23px;border:1px solid var(--line);border-radius:17px;background:#0b1612}.stat strong{font-size:28px;display:block}.stat span{color:var(--muted);font-size:13px}
+.calculator{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.calc,.portfolio{border:1px solid var(--line);border-radius:20px;background:#0c1713;padding:24px}
+label{display:block;color:#a6bbb0;font-size:13px;font-weight:700;margin:16px 0 7px}
+input,select{width:100%;padding:13px;border-radius:11px;border:1px solid var(--line);background:#07100d;color:white;outline:none}
+input:focus,select:focus{border-color:#4c8c68}
+.range{accent-color:var(--accent);padding:0}
+.result{margin-top:22px;padding:20px;border-radius:15px;background:#12241a;border:1px solid #254633}
+.result .big{font-size:37px;font-weight:850;letter-spacing:-.05em}
+.alloc{display:grid;grid-template-columns:150px 1fr;gap:25px;align-items:center}
+.donut{width:145px;height:145px;border-radius:50%;background:conic-gradient(var(--accent) 0 45%,#75a6ff 45% 70%,#d9ae66 70% 90%,#50635a 90%);display:grid;place-items:center}
+.donut:after{content:"Portfolio";width:90px;height:90px;border-radius:50%;background:#0c1713;display:grid;place-items:center;color:#a8bbb1;font-size:12px}
+.alloc-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:14px 9px;border-bottom:1px solid var(--line)}.table th{color:#789084;font-size:12px;text-transform:uppercase}
+.badge{font-size:11px;border-radius:999px;padding:5px 8px;background:#163022;color:#9be4b6}.risk{background:#2b2414;color:var(--warning)}
+.cta{padding:45px;border:1px solid #274737;border-radius:24px;background:radial-gradient(circle at 80% 10%,#173d29,transparent 40%),#0d1c15;display:flex;justify-content:space-between;align-items:center;gap:30px}
+footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:12px}
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal-back.show{display:flex}.modal{width:min(520px,100%);background:#0d1914;border:1px solid #315340;border-radius:20px;padding:25px;box-shadow:var(--shadow)}
+.modal-head{display:flex;justify-content:space-between}.close{background:none;border:0;color:#a7b9b0;font-size:25px}
+.notice{padding:12px;background:#211d10;color:#dccb9a;border:1px solid #4a4023;border-radius:11px;font-size:12px;margin-top:15px}
+.mobile-menu{display:none}
+@media(max-width:850px){
+ .navlinks{display:none}.mobile-menu{display:block}.hero{grid-template-columns:1fr;padding-top:55px}.mock{transform:none}
+ .cards,.stats{grid-template-columns:1fr 1fr}.calculator{grid-template-columns:1fr}.alloc{grid-template-columns:1fr}
+ .cta{display:block}.cta .btn{margin-top:15px}
+}
+@media(max-width:540px){.cards,.stats{grid-template-columns:1fr}.nav-actions .ghost{display:none}h1{font-size:48px}.hero-buttons{flex-direction:column}.hero-buttons .btn{width:100%}}
+</style>
+</head>
+<body>
+
+<header class="container nav">
+  <a class="logo" href="#">NOVA<span>BRIDGE</span></a>
+  <nav class="navlinks">
+    <a href="#opportunities">Opportunities</a><a href="#calculator">Calculator</a><a href="#portfolio">Portfolio</a><a href="#activity">Activity</a>
+  </nav>
+  <div class="nav-actions"><button class="btn ghost" onclick="openModal('login')">Log in</button><button class="btn primary" onclick="openModal('signup')">Get started</button></div>
+  <button class="btn mobile-menu" onclick="document.querySelector('.navlinks').style.display=document.querySelector('.navlinks').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<main>
+<section class="container hero">
+ <div>
+   <span class="eyebrow"><span class="dot"></span> DIGITAL ASSETS • PRIVATE CREDIT • MINING</span>
+   <h1>Put capital to work across new markets.</h1>
+  <p>Explore crypto, mining and private-credit opportunities from one transparent investment interface. Returns are market-dependent and capital is at risk.</p>
+   <div class="hero-buttons"><button class="btn primary" onclick="scrollToId('opportunities')">Explore opportunities →</button><button class="btn" onclick="openModal('learn')">How it works</button></div>
+   <p class="hero-note">Prototype only — all balances, transactions and performance figures shown on this page are simulated.</p>
+ </div>
+ <div class="mock">
+   <div class="mock-top"><span>PORTFOLIO</span><span>● LIVE UI</span></div>
+   <div class="balance" id="heroBalance">$24,850.40</div>
+   <div class="up">+$1,932.16 · +8.42%</div>
+   <div class="chart">
+    <svg viewBox="0 0 500 150" preserveAspectRatio="none">
+      <defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-opacity=".28"/><stop offset="1" stop-opacity="0"/></linearGradient></defs>
+      <path d="M0 125 C45 115,55 130,90 103 S145 118,180 82 S220 95,250 69 S305 92,335 55 S390 71,420 35 S460 50,500 17 L500 150 L0 150Z" fill="url(#fill)"/>
+      <path d="M0 125 C45 115,55 130,90 103 S145 118,180 82 S220 95,250 69 S305 92,335 55 S390 71,420 35 S460 50,500 17" fill="none" stroke="currentColor" stroke-width="3"/>
+    </svg>
+   </div>
+   <div class="mini-grid"><div class="mini">BTC <b>$74,940</b></div><div class="mini">Mining <b>34.2%</b></div><div class="mini">Credit <b>12.5%</b></div></div>
+ </div>
+</section>
+
+<section class="container section" id="opportunities">
+ <div class="section-head"><div><div class="kicker">Explore</div><h2>Opportunities</h2></div><span class="muted">Variable outcomes • Capital secure </span></div>
+ <div class="cards">
+  <article class="card"><div class="icon">₿</div><span class="tag">MARKET-LINKED</span><h3>Digital Asset Strategy</h3><p class="muted">A diversified basket of major digital assets with portfolio-level risk controls.</p><button class="btn" onclick="openInvest('Digital Asset Strategy')">View opportunity</button></article>
+  <article class="card"><div class="icon">⛏</div><span class="tag">INFRASTRUCTURE</span><h3>Mining Infrastructure</h3><p class="muted">Exposure to crypto-mining infrastructure with promised yield.</p><button class="btn" onclick="openInvest('Mining Infrastructure')">View opportunity</button></article>
+  <article class="card"><div class="icon">↗</div><span class="tag">PRIVATE CREDIT</span><h3>Short-Term Credit</h3><p class="muted">Illustrative private-credit strategy targeting risk-adjusted income from qualifying borrowers.</p><button class="btn" onclick="openInvest('Short-Term Credit')">View opportunity</button></article>
+ </div>
+</section>
+
+<section class="container section">
+ <div class="stats">
+  <div class="stat"><strong>$4.8M</strong><span> Assets tracked</span></div><div class="stat"><strong>1,284</strong><span> Investors</span></div><div class="stat"><strong>24/7</strong><span>Portfolio monitoring</span></div><div class="stat"><strong>4.8/5</strong><span> Consumer score </span></div>
+ </div>
+</section>
+
+<section class="container section" id="calculator">
+ <div class="section-head"><div><div class="kicker">Planning tool</div><h2>Investment calculator</h2></div></div>
+ <div class="calculator">
+  <div class="calc">
+   <label>Initial investment: <b id="amountLabel">$10,000</b></label>
+   <input id="amount" class="range" type="range" min="500" max="100000" step="500" value="10000" oninput="calculate()">
+   <label> Annual return</label>
+   <select id="rate" onchange="calculate()"><option value="0.05">5% </option><option value="0.10" selected>10% </option><option value="0.20">20%  </option><option value="0.35">35% </option></select>
+   <label>Time horizon</label>
+   <select id="years" onchange="calculate()"><option>1</option><option selected>3</option><option>5</option><option>10</option></select>
+   <div class="result"><div class="muted"> </div><div class="big" id="ending">$13,310</div><div class="up" id="gain">+$3,310 gain</div></div>
+   <div class="notice">This calculator is mathematical illustration only. </div>
+  </div>
+  <div class="portfolio" id="portfolio">
+   <div class="kicker">Sample portfolio</div><h2>Balanced digital</h2><p class="muted">A fictional allocation used to demonstrate the dashboard.</p>
+   <div class="alloc"><div class="donut"></div><div><div class="alloc-row"><span>Digital assets</span><b>45%</b></div><div class="alloc-row"><span>Mining</span><b>25%</b></div><div class="alloc-row"><span>Private credit</span><b>20%</b></div><div class="alloc-row"><span>Cash</span><b>10%</b></div></div></div>
+  </div>
+ </div>
+</section>
+
+<section class="container section" id="activity">
+ <div class="section-head"><div><div class="kicker">Dashboard</div><h2>Recent activity</h2></div><button class="btn" onclick="openModal('deposit')">＋ Add demo funds</button></div>
+ <div class="card" style="overflow:auto">
+ <table class="table"><thead><tr><th>Activity</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+ <tr><td>Mining Infrastructure</td><td>Allocation</td><td>$4,500</td><td><span class="badge">Active</span></td></tr>
+ <tr><td>Digital Asset Strategy</td><td>Allocation</td><td>$8,250</td><td><span class="badge">Active</span></td></tr>
+ <tr><td>USD Deposit</td><td>Funding</td><td>$10,000</td><td><span class="badge"> </span></td></tr>
+ <tr><td>Private Credit</td><td>Allocation</td><td>$2,100</td><td><span class="badge risk">Review</span></td></tr>
+ </tbody></table>
+ </div>
+</section>
+
+<section class="container section">
+ <div class="cta"><div><div class="kicker">Start exploring</div><h2>One dashboard. Multiple strategies.</h2><p class="muted">Create a portfolio now </p></div><button class="btn primary" onclick="openModal('signup')">Create account →</button></div>
+</section>
+</main>
+
+<footer><div class="container">
+ <b>NOVABRIDGE CAPITAL</b><p> Broker, investment adviser, mining operator, or lender. 
+ <p>Crypto assets can be highly volatile and may result in partial or total loss. Private credit carries borrower, liquidity and default risks. Appropriate licensing, disclosures, KYC/AML controls, custody arrangements and jurisdiction-specific legal review.</p>
+ <p>© 2026 NovaBridge Capital — </p>
+</div></footer>
+
+<div class="modal-back" id="modalBack" onclick="if(event.target===this)closeModal()">
+ <div class="modal">
+  <div class="modal-head"><div><div class="kicker" id="modalKicker">NOVA BRIDGE</div><h2 id="modalTitle">Welcome</h2></div><button class="close" onclick="closeModal()">×</button></div>
+  <div id="modalBody"></div>
+ </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>'$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(url,opt={}){const r=await fetch(url,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Request failed');return d}
+function calculate(){const a=+$('amount').value,r=+$('rate').value,y=+$('years').value,e=a*Math.pow(1+r,y);$('amountLabel').textContent='$'+a.toLocaleString();$('ending').textContent='$'+Math.round(e).toLocaleString();$('gain').textContent='+$'+Math.round(e-a).toLocaleString()+' hypothetical gain'}
+function closeModal(){$('modalBack').classList.remove('show')}
+function openModal(type){
+const d={
+login:['ACCOUNT','Log in',`<p class="muted">Access your NovaBridge account.</p><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com"><label>Password</label><input id="loginPassword" type="password" placeholder="••••••••"><button class="btn primary" style="width:100%;margin-top:18px" onclick="login()">Log in</button><div id="modalMsg"></div>`],
+signup:['ACCOUNT','Create your account',`<p class="muted"> </p><label>Full name</label><input id="signupName" placeholder="Alex Morgan"><label>Email</label><input id="signupEmail" type="email" placeholder="you@example.com"><label>Password</label><input id="signupPassword" type="password" placeholder="At least 8 characters"><button class="btn primary" style="width:100%;margin-top:18px" onclick="register()">Create account</button><div id="modalMsg"></div>`],
+learn:['HOW IT WORKS','Three steps',`<div class="card"><b>01 — Choose</b><p class="muted"> Invest </p><b>02 — Allocate</b><p class="muted"> EARN.</p><b>03 — Monitor</b><p class="muted">Track activity and portfolio cash.</p></div><div class="notice"> </div>`],
+deposit:['FUNDING','Demo funding',`<p class="muted">No real payment is processed.</p><label>Demo amount</label><input id="demoDeposit" type="number" value="5000" min="100"><button class="btn primary" style="width:100%;margin-top:18px" onclick="addFunds()">Add funds</button><div id="modalMsg"></div>`]};
+const x=d[type]||d.learn;$('modalKicker').textContent=x[0];$('modalTitle').textContent=x[1];$('modalBody').innerHTML=x[2];$('modalBack').classList.add('show')}
+async function register(){try{let d=await api('/api/register',{method:'POST',body:JSON.stringify({name:$('signupName').value,email:$('signupEmail').value,password:$('signupPassword').value})});closeModal();await loadDashboard();toast('Welcome, '+d.user.name+'.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function login(){try{let d=await api('/api/login',{method:'POST',body:JSON.stringify({email:$('loginEmail').value,password:$('loginPassword').value})});closeModal();await loadDashboard();toast('Welcome back, '+d.user.name+'.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function loadDashboard(){try{let d=await api('/api/dashboard');$('heroBalance').textContent=money(d.portfolio.cash);document.querySelector('#activity tbody').innerHTML=d.activities.length?d.activities.map(a=>`<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join(''):`<tr><td colspan="4" class="muted">No activity yet. Add demo funds to begin.</td></tr>`}catch(_){}}
+async function addDemoFunds(){try{await api('/api/demo-deposit',{method:'POST',body:JSON.stringify({amount:+$('demoDeposit').value})});closeModal();await loadDashboard();toast('Demo funds added.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+function openInvest(name){$('modalKicker').textContent='OPPORTUNITY';$('modalTitle').textContent=name;$('modalBody').innerHTML=`<p class="muted">Simulated opportunity detail.</p><label>Demo allocation</label><input id="investAmt" type="number" value="2500" min="100"><div class="notice">No real investment will be made. Outcomes are uncertain.</div><button class="btn primary" style="width:100%;margin-top:18px" onclick="allocate('${esc(name)}')">Allocate in demo</button><div id="modalMsg"></div>`;$('modalBack').classList.add('show')}
+async function allocate(name){try{await api('/api/demo-allocation',{method:'POST',body:JSON.stringify({name,amount:+$('investAmt').value})});closeModal();await loadDashboard();toast('Demo allocation added.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+function toast(m){let t=document.createElement('div');t.textContent=m;t.style='position:fixed;right:20px;bottom:20px;z-index:50;background:#163022;color:#b9ffd2;border:1px solid #345846;padding:14px 18px;border-radius:12px;font-weight:700';document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+calculate();loadDashboard();
+</script>
+</body>
+</html>
+
