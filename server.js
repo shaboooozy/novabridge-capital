@@ -47,7 +47,7 @@ const walletPatterns = {
   stellar: /^G[A-Z2-7]{55}$/,
   zcash: /^(t1|t3)[a-zA-Z0-9]{33}$/
 };
-const depositAddresses = {
+const defaultDepositAddresses = {
   bitcoin: { name: 'Bitcoin', address: 'bc1qymu6sdct5zehsg9tghnswn3pqt88kkcddss2gz' },
   ethereum: { name: 'Ethereum', address: '0x0207ac5E02613c726610a0f88f14619ddbe164f1' },
   solana: { name: 'Solana', address: '2CQ4hAJAdGMck42XAunaxjUdWeeFHHjvNVpSq9BBBvrU' },
@@ -55,9 +55,25 @@ const depositAddresses = {
   stellar: { name: 'Stellar', address: 'GAHM5IJJEF3MUH7KGNKVCI7R66XYGLJVA5FXM55ST3LITOUXRAY7GPO4' },
   zcash: { name: 'Zcash', address: 't1MLXZDifNbQtVCrB4KzcbiXzitUqEKA2vu' }
 };
-for (const [network, info] of Object.entries(depositAddresses)) {
-  if (!walletPatterns[network]?.test(info.address)) throw new Error(`Invalid deposit address configured for ${network}.`);
-}
+const parseId = value => {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+};
+const mapUser = row => ({
+  id: row.id,
+  name: row.name,
+  email: row.email,
+  role: row.role,
+  emailVerified: Boolean(row.email_verified_at),
+  email_verified_at: row.email_verified_at,
+  flagged: Boolean(row.flagged),
+  flagReason: row.flag_reason || '',
+  flagged_at: row.flagged_at,
+  accountStatus: row.account_status || 'active',
+  adminNotes: row.admin_notes || '',
+  created_at: row.created_at,
+  cash: money(row.cash_cents)
+});
 const mailer = process.env.SMTP_HOST ? nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
@@ -146,7 +162,44 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS withdrawal_requests_user_id_idx ON withdrawal_requests(user_id, id DESC);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS flagged BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS flag_reason TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS flagged_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS flagged_by BIGINT REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'active';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_notes TEXT NOT NULL DEFAULT '';
+    ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS review_note TEXT;
+    ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS activity_id BIGINT REFERENCES activities(id) ON DELETE SET NULL;
+    CREATE TABLE IF NOT EXISTS funding_requests (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      network TEXT NOT NULL,
+      deposit_address TEXT NOT NULL,
+      amount_cents BIGINT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending',
+      activity_id BIGINT REFERENCES activities(id) ON DELETE SET NULL,
+      reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at TIMESTAMPTZ,
+      review_note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS funding_requests_user_id_idx ON funding_requests(user_id, id DESC);
+    CREATE TABLE IF NOT EXISTS deposit_wallets (
+      id BIGSERIAL PRIMARY KEY,
+      network TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      address TEXT NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
+  for (const [network, info] of Object.entries(defaultDepositAddresses)) {
+    await q(
+      'INSERT INTO deposit_wallets(network,name,address,active) VALUES($1,$2,$3,TRUE) ON CONFLICT (network) DO NOTHING',
+      [network, info.name, info.address]
+    );
+  }
   if (process.env.ADMIN_EMAIL) await q('UPDATE users SET role=\'admin\' WHERE email=$1', [email(process.env.ADMIN_EMAIL)]);
 }
 
@@ -199,6 +252,30 @@ async function verified(req, res, next) {
   next();
 }
 
+async function getUserRestriction(userId) {
+  const result = await q('SELECT flagged, account_status FROM users WHERE id=$1', [userId]);
+  const u = result.rows[0];
+  if (!u) return { status: 401, error: 'Account not found.' };
+  if (u.account_status === 'suspended') return { status: 403, error: 'This account is suspended.' };
+  if (u.flagged || u.account_status === 'flagged') return { status: 403, error: 'This account is restricted. Contact support.' };
+  return null;
+}
+
+async function restricted(req, res, next) {
+  const block = await getUserRestriction(req.session.userId);
+  if (block) return res.status(block.status).json({ error: block.error });
+  next();
+}
+
+async function listDepositWallets(activeOnly = true) {
+  const result = await q(
+    activeOnly
+      ? 'SELECT id,network,name,address,active,updated_at FROM deposit_wallets WHERE active=TRUE ORDER BY id'
+      : 'SELECT id,network,name,address,active,updated_at FROM deposit_wallets ORDER BY id'
+  );
+  return result.rows;
+}
+
 app.get('/api/health', async (req, res) => {
   try { await q('SELECT 1'); res.json({ ok: true, service: 'novabridge', database: 'connected', time: new Date().toISOString() }); }
   catch (_) { res.status(503).json({ ok: false }); }
@@ -209,10 +286,9 @@ app.get('/api/products', async (req, res) => {
   res.json({ products: result.rows.map(product => ({ ...product, minimum: money(product.minimum_cents) })) });
 });
 
-app.get('/api/deposit-addresses', auth, (req, res) => {
-  res.json({
-    networks: Object.entries(depositAddresses).map(([id, value]) => ({ id, name: value.name, address: value.address }))
-  });
+app.get('/api/deposit-addresses', auth, async (req, res) => {
+  const wallets = await listDepositWallets(true);
+  res.json({ networks: wallets.map(wallet => ({ id: wallet.network, name: wallet.name, address: wallet.address })) });
 });
 
 app.post('/api/register', async (req, res) => {
@@ -252,15 +328,21 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const e = email(req.body.email), pw = String(req.body.password || '');
-    const r = await q('SELECT id,name,email,password_hash,role,email_verified_at FROM users WHERE email=$1', [e]);
+    const r = await q('SELECT id,name,email,password_hash,role,email_verified_at,flagged,account_status FROM users WHERE email=$1', [e]);
     const u = r.rows[0];
     if (!u || !(await bcrypt.compare(pw, u.password_hash))) return res.status(401).json({ error: 'Invalid email or password.' });
+    if (u.account_status === 'suspended') return res.status(403).json({ error: 'This account is suspended.' });
     req.session.regenerate(err => {
       if (err) return res.status(500).json({ error: 'Unable to start session.' });
       req.session.userId = u.id;
       req.session.role = u.role;
       audit(req, 'account.login');
-      res.json({ user: { id: u.id, name: u.name, email: u.email, role: u.role, emailVerified: Boolean(u.email_verified_at) } });
+      res.json({
+        user: {
+          id: u.id, name: u.name, email: u.email, role: u.role,
+          emailVerified: Boolean(u.email_verified_at), flagged: Boolean(u.flagged), accountStatus: u.account_status
+        }
+      });
     });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Unable to sign in.' }); }
 });
@@ -303,33 +385,41 @@ app.post('/api/password-reset/confirm', async (req, res) => {
 
 app.get('/api/me', async (req, res) => {
   if (!req.session.userId) return res.json({ authenticated: false });
-  const r = await q('SELECT id,name,email,role,email_verified_at,created_at FROM users WHERE id=$1', [req.session.userId]);
+  const r = await q('SELECT id,name,email,role,email_verified_at,flagged,flag_reason,account_status,created_at FROM users WHERE id=$1', [req.session.userId]);
   if (!r.rows[0]) return res.status(401).json({ error: 'Account not found.' });
   const u = r.rows[0];
   res.json({
     authenticated: true,
-    user: { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, emailVerified: Boolean(u.email_verified_at) }
+    user: {
+      id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at,
+      emailVerified: Boolean(u.email_verified_at), flagged: Boolean(u.flagged),
+      flagReason: u.flag_reason || '', accountStatus: u.account_status
+    }
   });
 });
 
 app.get('/api/dashboard', auth, async (req, res) => {
   const p = await q('SELECT cash_cents FROM portfolios WHERE user_id=$1', [req.session.userId]);
   const pending = await q("SELECT COALESCE(SUM(amount_cents),0) AS amount FROM withdrawal_requests WHERE user_id=$1 AND status='Pending'", [req.session.userId]);
-  const user = await q('SELECT email_verified_at FROM users WHERE id=$1', [req.session.userId]);
+  const user = await q('SELECT email_verified_at,flagged,flag_reason,account_status FROM users WHERE id=$1', [req.session.userId]);
   const a = await q('SELECT activity,type,amount_cents,status,created_at FROM activities WHERE user_id=$1 ORDER BY id DESC LIMIT 20', [req.session.userId]);
   const products = await q("SELECT slug,name,category,description,risk_level,minimum_cents FROM products WHERE status='active' AND verified_at IS NOT NULL ORDER BY id");
   const cashCents = Number(p.rows[0]?.cash_cents || 0);
   const pendingCents = Number(pending.rows[0]?.amount || 0);
   const availableCents = Math.max(0, cashCents - pendingCents);
+  const u = user.rows[0] || {};
   res.json({
     portfolio: { cash: money(cashCents), available: money(availableCents), pendingWithdrawal: money(pendingCents) },
-    emailVerified: Boolean(user.rows[0]?.email_verified_at),
+    emailVerified: Boolean(u.email_verified_at),
+    flagged: Boolean(u.flagged),
+    flagReason: u.flag_reason || '',
+    accountStatus: u.account_status || 'active',
     activities: a.rows.map(x => ({ ...x, amount: money(x.amount_cents) })),
     products: products.rows.map(x => ({ ...x, minimum: money(x.minimum_cents) }))
   });
 });
 
-app.post('/api/withdrawals', auth, verified, async (req, res) => {
+app.post('/api/withdrawals', auth, verified, restricted, async (req, res) => {
   const network = String(req.body.network || '').toLowerCase();
   const walletAddress = String(req.body.walletAddress || '').trim();
   const amount = Number(req.body.amount);
@@ -344,8 +434,8 @@ app.post('/api/withdrawals', auth, verified, async (req, res) => {
     const pending = await client.query("SELECT COALESCE(SUM(amount_cents),0) AS amount FROM withdrawal_requests WHERE user_id=$1 AND status='Pending'", [req.session.userId]);
     const availableCents = Number(portfolio.rows[0]?.cash_cents || 0) - Number(pending.rows[0]?.amount || 0);
     if (amountCents > availableCents) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Insufficient available balance.' }); }
-    const request = await client.query('INSERT INTO withdrawal_requests(user_id,network,wallet_address,amount_cents) VALUES($1,$2,$3,$4) RETURNING id,network,wallet_address,amount_cents,status,created_at', [req.session.userId, network, walletAddress, amountCents]);
-    await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [req.session.userId, `Withdrawal request · ${network}`, 'Withdrawal', amountCents, 'Pending']);
+    const activity = await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5) RETURNING id', [req.session.userId, `Withdrawal request · ${network}`, 'Withdrawal', amountCents, 'Pending']);
+    const request = await client.query('INSERT INTO withdrawal_requests(user_id,network,wallet_address,amount_cents,activity_id) VALUES($1,$2,$3,$4,$5) RETURNING id,network,wallet_address,amount_cents,status,created_at', [req.session.userId, network, walletAddress, amountCents, activity.rows[0].id]);
     await client.query('COMMIT');
     await audit(req, 'withdrawal.requested', { withdrawalId: request.rows[0].id, network, amount, walletAddress });
     res.status(201).json({ ok: true, withdrawal: { ...request.rows[0], amount: money(amountCents) } });
@@ -363,13 +453,13 @@ app.get('/api/admin/audit-logs', auth, admin, async (req, res) => {
 
 app.get('/api/admin/users', auth, admin, async (req, res) => {
   const result = await q(`
-    SELECT u.id,u.name,u.email,u.role,u.email_verified_at,u.created_at,p.cash_cents
+    SELECT u.id,u.name,u.email,u.role,u.email_verified_at,u.flagged,u.flag_reason,u.flagged_at,u.account_status,u.admin_notes,u.created_at,p.cash_cents
     FROM users u
     LEFT JOIN portfolios p ON p.user_id = u.id
     ORDER BY u.id DESC
-    LIMIT 100
+    LIMIT 200
   `);
-  res.json({ users: result.rows.map(user => ({ ...user, cash: money(user.cash_cents) })) });
+  res.json({ users: result.rows.map(mapUser) });
 });
 
 app.get('/api/admin/withdrawals', auth, admin, async (req, res) => {
@@ -455,14 +545,24 @@ app.post('/api/admin/products/:id/verify', auth, admin, async (req, res) => {
 
 // Funding requests do not increase the balance. A verified payment/custodian webhook
 // must call /api/webhooks/funding before settled funds become available.
-app.post('/api/funding-request', auth, verified, async (req, res) => {
+app.post('/api/funding-request', auth, verified, restricted, async (req, res) => {
   const n = Number(req.body.amount);
   const network = String(req.body.network || '').toLowerCase();
-  const deposit = depositAddresses[network];
   if (!Number.isFinite(n) || n < 100 || n > 1000000) return res.status(400).json({ error: 'Amount must be between $100 and $1,000,000.' });
+  const deposit = (await q('SELECT network,name,address FROM deposit_wallets WHERE network=$1 AND active=TRUE', [network])).rows[0];
   if (!deposit) return res.status(400).json({ error: 'Select a supported network.' });
   const c = cents(n);
-  await q('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [req.session.userId, `USD Funding Request · ${deposit.name}`, 'Funding', c, 'Pending']);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const activity = await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5) RETURNING id', [req.session.userId, `USD Funding Request · ${deposit.name}`, 'Funding', c, 'Pending']);
+    await client.query('INSERT INTO funding_requests(user_id,network,deposit_address,amount_cents,activity_id) VALUES($1,$2,$3,$4,$5)', [req.session.userId, network, deposit.address, c, activity.rows[0].id]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    return res.status(500).json({ error: 'Funding request could not be created.' });
+  } finally { client.release(); }
   await audit(req, 'funding.requested', { amount: n, network, depositAddress: deposit.address });
   res.status(201).json({ ok: true, status: 'Pending', network, depositAddress: deposit.address });
 });
@@ -487,7 +587,7 @@ app.post('/api/webhooks/funding', async (req, res) => {
   finally { client.release(); }
 });
 
-app.post('/api/allocation', auth, verified, async (req, res) => {
+app.post('/api/allocation', auth, verified, restricted, async (req, res) => {
   const name = String(req.body.name || '').trim();
   const n = Number(req.body.amount);
   if (!name || name.length > 120 || !Number.isFinite(n) || n < 100) return res.status(400).json({ error: 'Enter a valid allocation.' });
@@ -504,6 +604,271 @@ app.post('/api/allocation', auth, verified, async (req, res) => {
     res.json({ ok: true });
   } catch (err) { await client.query('ROLLBACK'); console.error(err); res.status(500).json({ error: 'Allocation could not be recorded.' }); }
   finally { client.release(); }
+});
+
+app.get('/api/admin/users/:id', auth, admin, async (req, res) => {
+  const userId = parseId(req.params.id);
+  if (!userId) return res.status(400).json({ error: 'Select a valid user.' });
+  const result = await q(`
+    SELECT u.id,u.name,u.email,u.role,u.email_verified_at,u.flagged,u.flag_reason,u.flagged_at,u.account_status,u.admin_notes,u.created_at,p.cash_cents
+    FROM users u LEFT JOIN portfolios p ON p.user_id=u.id WHERE u.id=$1
+  `, [userId]);
+  if (!result.rows[0]) return res.status(404).json({ error: 'User not found.' });
+  const activities = await q('SELECT id,activity,type,amount_cents,status,created_at FROM activities WHERE user_id=$1 ORDER BY id DESC LIMIT 30', [userId]);
+  res.json({
+    user: mapUser(result.rows[0]),
+    activities: activities.rows.map(item => ({ ...item, amount: money(item.amount_cents) }))
+  });
+});
+
+app.patch('/api/admin/users/:id', auth, admin, async (req, res) => {
+  const userId = parseId(req.params.id);
+  if (!userId) return res.status(400).json({ error: 'Select a valid user.' });
+  const existing = await q('SELECT id,email,role FROM users WHERE id=$1', [userId]);
+  if (!existing.rows[0]) return res.status(404).json({ error: 'User not found.' });
+  if (userId === req.session.userId && req.body.role && req.body.role !== 'admin') {
+    return res.status(400).json({ error: 'You cannot remove your own administrator role.' });
+  }
+
+  const updates = [];
+  const params = [];
+  const add = (fragment, value) => { params.push(value); updates.push(`${fragment}=$${params.length}`); };
+
+  if (req.body.name !== undefined) {
+    const name = String(req.body.name || '').trim();
+    if (name.length < 2 || name.length > 100) return res.status(400).json({ error: 'Enter a valid name.' });
+    add('name', name);
+  }
+  if (req.body.email !== undefined) {
+    const e = email(req.body.email);
+    if (!/^\S+@\S+\.\S+$/.test(e)) return res.status(400).json({ error: 'Enter a valid email.' });
+    add('email', e);
+  }
+  if (req.body.role !== undefined) {
+    const role = String(req.body.role || '').toLowerCase();
+    if (!['user', 'admin'].includes(role)) return res.status(400).json({ error: 'Role must be user or admin.' });
+    add('role', role);
+  }
+  if (req.body.emailVerified !== undefined) {
+    if (req.body.emailVerified) updates.push('email_verified_at=COALESCE(email_verified_at, NOW())');
+    else updates.push('email_verified_at=NULL');
+  }
+  if (req.body.adminNotes !== undefined) add('admin_notes', String(req.body.adminNotes || '').slice(0, 2000));
+  if (req.body.accountStatus !== undefined) {
+    const status = String(req.body.accountStatus || '').toLowerCase();
+    if (!['active', 'flagged', 'suspended'].includes(status)) return res.status(400).json({ error: 'Invalid account status.' });
+    add('account_status', status);
+    if (status === 'flagged') {
+      updates.push('flagged=TRUE');
+      updates.push('flagged_at=COALESCE(flagged_at, NOW())');
+      params.push(req.session.userId);
+      updates.push(`flagged_by=$${params.length}`);
+    }
+    if (status === 'active') {
+      updates.push('flagged=FALSE');
+      updates.push('flag_reason=NULL');
+      updates.push('flagged_at=NULL');
+      updates.push('flagged_by=NULL');
+    }
+    if (status === 'suspended') updates.push('flagged=TRUE');
+  }
+  if (req.body.password) {
+    const pw = String(req.body.password);
+    if (pw.length < 8 || pw.length > 200) return res.status(400).json({ error: 'Password must be 8–200 characters.' });
+    add('password_hash', await bcrypt.hash(pw, 12));
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    if (updates.length) {
+      params.push(userId);
+      await client.query(`UPDATE users SET ${updates.join(', ')} WHERE id=$${params.length}`, params);
+    }
+    if (req.body.cash !== undefined) {
+      const cashAmount = Number(req.body.cash);
+      if (!Number.isFinite(cashAmount) || cashAmount < 0 || cashAmount > 10000000) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Enter a cash balance between $0 and $10,000,000.' });
+      }
+      const nextCents = cents(cashAmount);
+      const current = await client.query('SELECT cash_cents FROM portfolios WHERE user_id=$1 FOR UPDATE', [userId]);
+      const previous = Number(current.rows[0]?.cash_cents || 0);
+      await client.query('UPDATE portfolios SET cash_cents=$1, updated_at=NOW() WHERE user_id=$2', [nextCents, userId]);
+      if (previous !== nextCents) {
+        await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [userId, 'Admin balance adjustment', 'Admin Adjustment', nextCents - previous, 'Completed']);
+      }
+    }
+    const saved = await client.query(`
+      SELECT u.id,u.name,u.email,u.role,u.email_verified_at,u.flagged,u.flag_reason,u.flagged_at,u.account_status,u.admin_notes,u.created_at,p.cash_cents
+      FROM users u LEFT JOIN portfolios p ON p.user_id=u.id WHERE u.id=$1
+    `, [userId]);
+    await client.query('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [req.session.userId, 'user.updated', { targetUserId: userId, fields: Object.keys(req.body) }]);
+    await client.query('COMMIT');
+    if (req.body.role && userId === req.session.userId) req.session.role = saved.rows[0].role;
+    res.json({ ok: true, user: mapUser(saved.rows[0]) });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    if (err.code === '23505') return res.status(409).json({ error: 'An account with that email already exists.' });
+    console.error(err);
+    res.status(500).json({ error: 'Account could not be updated.' });
+  } finally { client.release(); }
+});
+
+app.post('/api/admin/users/:id/flag', auth, admin, async (req, res) => {
+  const userId = parseId(req.params.id);
+  const reason = String(req.body.reason || '').trim();
+  if (!userId) return res.status(400).json({ error: 'Select a valid user.' });
+  if (userId === req.session.userId) return res.status(400).json({ error: 'You cannot flag your own administrator account.' });
+  if (!reason || reason.length > 500) return res.status(400).json({ error: 'Enter a flag reason.' });
+  const result = await q(
+    "UPDATE users SET flagged=TRUE, flag_reason=$1, flagged_at=NOW(), flagged_by=$2, account_status='flagged' WHERE id=$3 RETURNING id,name,email,flagged,flag_reason,account_status",
+    [reason, req.session.userId, userId]
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: 'User not found.' });
+  await audit(req, 'user.flagged', { targetUserId: userId, reason });
+  res.json({ ok: true, user: result.rows[0] });
+});
+
+app.post('/api/admin/users/:id/unflag', auth, admin, async (req, res) => {
+  const userId = parseId(req.params.id);
+  if (!userId) return res.status(400).json({ error: 'Select a valid user.' });
+  const result = await q(
+    "UPDATE users SET flagged=FALSE, flag_reason=NULL, flagged_at=NULL, flagged_by=NULL, account_status='active' WHERE id=$1 RETURNING id,name,email,flagged,account_status",
+    [userId]
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: 'User not found.' });
+  await audit(req, 'user.unflagged', { targetUserId: userId });
+  res.json({ ok: true, user: result.rows[0] });
+});
+
+app.post('/api/admin/users/:id/debit', auth, admin, async (req, res) => {
+  const userId = parseId(req.params.id);
+  const amount = Number(req.body.amount);
+  const note = String(req.body.note || '').trim();
+  if (!userId) return res.status(400).json({ error: 'Select a valid user.' });
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 10000000) return res.status(400).json({ error: 'Enter a debit amount between $0.01 and $10,000,000.' });
+  const amountCents = cents(amount);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const user = await client.query('SELECT id,name,email FROM users WHERE id=$1 FOR UPDATE', [userId]);
+    if (!user.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'User not found.' }); }
+    const portfolio = await client.query('SELECT cash_cents FROM portfolios WHERE user_id=$1 FOR UPDATE', [userId]);
+    if (Number(portfolio.rows[0]?.cash_cents || 0) < amountCents) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Insufficient balance to debit.' }); }
+    await client.query('UPDATE portfolios SET cash_cents=cash_cents-$1, updated_at=NOW() WHERE user_id=$2', [amountCents, userId]);
+    await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [userId, note || 'Admin debit', 'Admin Debit', amountCents, 'Completed']);
+    await client.query('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [req.session.userId, 'user.balance_debited', { targetUserId: userId, amount, note }]);
+    await client.query('COMMIT');
+    res.json({ ok: true, user: user.rows[0], amount: money(amountCents) });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Balance debit failed.' });
+  } finally { client.release(); }
+});
+
+app.get('/api/admin/funding', auth, admin, async (req, res) => {
+  const result = await q(`
+    SELECT f.id,f.user_id,f.network,f.deposit_address,f.amount_cents,f.status,f.review_note,f.created_at,f.reviewed_at,u.name,u.email
+    FROM funding_requests f JOIN users u ON u.id=f.user_id
+    ORDER BY f.id DESC LIMIT 200
+  `);
+  res.json({ funding: result.rows.map(item => ({ ...item, amount: money(item.amount_cents) })) });
+});
+
+async function reviewFunding(req, res, decision) {
+  const id = parseId(req.params.id);
+  const note = String(req.body.note || '').trim();
+  if (!id) return res.status(400).json({ error: 'Select a valid funding request.' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const request = await client.query('SELECT * FROM funding_requests WHERE id=$1 FOR UPDATE', [id]);
+    const item = request.rows[0];
+    if (!item) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Funding request not found.' }); }
+    if (item.status !== 'Pending') { await client.query('ROLLBACK'); return res.status(409).json({ error: 'This funding request has already been reviewed.' }); }
+    const status = decision === 'approve' ? 'Approved' : 'Declined';
+    if (decision === 'approve') {
+      await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [item.amount_cents, item.user_id]);
+    }
+    await client.query('UPDATE funding_requests SET status=$1, reviewed_by=$2, reviewed_at=NOW(), review_note=$3 WHERE id=$4', [status, req.session.userId, note || null, id]);
+    await client.query(
+      `UPDATE activities SET status=$1 WHERE id=COALESCE($2, (SELECT id FROM activities WHERE user_id=$3 AND type='Funding' AND amount_cents=$4 AND status='Pending' ORDER BY id DESC LIMIT 1))`,
+      [status, item.activity_id, item.user_id, item.amount_cents]
+    );
+    await client.query('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [req.session.userId, decision === 'approve' ? 'funding.approved' : 'funding.declined', { fundingId: id, userId: item.user_id, amount: money(item.amount_cents), note }]);
+    await client.query('COMMIT');
+    res.json({ ok: true, status, amount: money(item.amount_cents) });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Funding request could not be reviewed.' });
+  } finally { client.release(); }
+}
+
+app.post('/api/admin/funding/:id/approve', auth, admin, (req, res) => reviewFunding(req, res, 'approve'));
+app.post('/api/admin/funding/:id/decline', auth, admin, (req, res) => reviewFunding(req, res, 'decline'));
+
+async function reviewWithdrawal(req, res, decision) {
+  const id = parseId(req.params.id);
+  const note = String(req.body.note || '').trim();
+  if (!id) return res.status(400).json({ error: 'Select a valid withdrawal request.' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const request = await client.query('SELECT * FROM withdrawal_requests WHERE id=$1 FOR UPDATE', [id]);
+    const item = request.rows[0];
+    if (!item) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Withdrawal request not found.' }); }
+    if (item.status !== 'Pending') { await client.query('ROLLBACK'); return res.status(409).json({ error: 'This withdrawal request has already been reviewed.' }); }
+    const status = decision === 'approve' ? 'Approved' : 'Declined';
+    if (decision === 'approve') {
+      const portfolio = await client.query('SELECT cash_cents FROM portfolios WHERE user_id=$1 FOR UPDATE', [item.user_id]);
+      if (Number(portfolio.rows[0]?.cash_cents || 0) < Number(item.amount_cents)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Insufficient balance to approve this withdrawal.' });
+      }
+      await client.query('UPDATE portfolios SET cash_cents=cash_cents-$1, updated_at=NOW() WHERE user_id=$2', [item.amount_cents, item.user_id]);
+    }
+    await client.query('UPDATE withdrawal_requests SET status=$1, reviewed_by=$2, reviewed_at=NOW(), review_note=$3 WHERE id=$4', [status, req.session.userId, note || null, id]);
+    await client.query(
+      `UPDATE activities SET status=$1 WHERE id=COALESCE($2, (SELECT id FROM activities WHERE user_id=$3 AND type='Withdrawal' AND amount_cents=$4 AND status='Pending' ORDER BY id DESC LIMIT 1))`,
+      [status, item.activity_id, item.user_id, item.amount_cents]
+    );
+    await client.query('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [req.session.userId, decision === 'approve' ? 'withdrawal.approved' : 'withdrawal.declined', { withdrawalId: id, userId: item.user_id, amount: money(item.amount_cents), note }]);
+    await client.query('COMMIT');
+    res.json({ ok: true, status, amount: money(item.amount_cents) });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Withdrawal request could not be reviewed.' });
+  } finally { client.release(); }
+}
+
+app.post('/api/admin/withdrawals/:id/approve', auth, admin, (req, res) => reviewWithdrawal(req, res, 'approve'));
+app.post('/api/admin/withdrawals/:id/decline', auth, admin, (req, res) => reviewWithdrawal(req, res, 'decline'));
+
+app.get('/api/admin/wallets', auth, admin, async (req, res) => {
+  res.json({ wallets: await listDepositWallets(false) });
+});
+
+app.put('/api/admin/wallets/:network', auth, admin, async (req, res) => {
+  const network = String(req.params.network || '').trim().toLowerCase();
+  const name = String(req.body.name || '').trim();
+  const address = String(req.body.address || '').trim();
+  const active = req.body.active !== false;
+  if (!/^[a-z0-9_-]{2,32}$/.test(network)) return res.status(400).json({ error: 'Enter a valid network id.' });
+  if (!name || name.length > 60) return res.status(400).json({ error: 'Enter a network name.' });
+  if (!address || address.length > 200) return res.status(400).json({ error: 'Enter a wallet address.' });
+  if (walletPatterns[network] && !walletPatterns[network].test(address)) return res.status(400).json({ error: 'Enter a valid wallet address for this network.' });
+  const result = await q(`
+    INSERT INTO deposit_wallets(network,name,address,active,updated_by,updated_at)
+    VALUES($1,$2,$3,$4,$5,NOW())
+    ON CONFLICT (network) DO UPDATE SET name=EXCLUDED.name, address=EXCLUDED.address, active=EXCLUDED.active, updated_by=EXCLUDED.updated_by, updated_at=NOW()
+    RETURNING id,network,name,address,active,updated_at
+  `, [network, name, address, active, req.session.userId]);
+  await audit(req, 'wallet.updated', { network, name, address, active });
+  res.json({ ok: true, wallet: result.rows[0] });
 });
 
 app.get('/admin.html', auth, admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));

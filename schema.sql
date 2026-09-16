@@ -8,7 +8,13 @@ CREATE TABLE IF NOT EXISTS users (
   verification_token_hash TEXT,
   reset_token_hash TEXT,
   reset_token_expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  flagged BOOLEAN NOT NULL DEFAULT FALSE,
+  flag_reason TEXT,
+  flagged_at TIMESTAMPTZ,
+  flagged_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  account_status TEXT NOT NULL DEFAULT 'active',
+  admin_notes TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS portfolios (
@@ -62,7 +68,35 @@ CREATE TABLE IF NOT EXISTS withdrawal_requests (
   status TEXT NOT NULL DEFAULT 'Pending',
   reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  review_note TEXT,
+  activity_id BIGINT REFERENCES activities(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS withdrawal_requests_user_id_idx ON withdrawal_requests(user_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS funding_requests (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  network TEXT NOT NULL,
+  deposit_address TEXT NOT NULL,
+  amount_cents BIGINT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Pending',
+  activity_id BIGINT REFERENCES activities(id) ON DELETE SET NULL,
+  reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  review_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS funding_requests_user_id_idx ON funding_requests(user_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS deposit_wallets (
+  id BIGSERIAL PRIMARY KEY,
+  network TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  address TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

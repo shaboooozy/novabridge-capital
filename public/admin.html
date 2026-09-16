@@ -8,14 +8,13 @@
     :root {
       --bg: #0a1211;
       --panel: #101d1b;
-      --panel-2: #12211f;
       --stroke: rgba(255,255,255,0.08);
       --text: #edf6f3;
       --muted: #a9c2ba;
       --brand: #7ee0b8;
-      --brand-2: #9ad1ff;
       --danger: #ffb4b4;
       --success: #baf8db;
+      --warn: #ffd98a;
     }
     * { box-sizing: border-box; }
     body {
@@ -24,54 +23,62 @@
       background: linear-gradient(180deg, #0a1211, #111c1a 28%, #0d1414);
       color: var(--text);
     }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 60px; }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 20px 70px; }
     header {
       display: flex; justify-content: space-between; align-items: center;
-      gap: 16px; padding: 16px 0 26px; border-bottom: 1px solid var(--stroke);
+      gap: 16px; padding: 8px 0 22px; border-bottom: 1px solid var(--stroke);
     }
-    .brand { font-size: 1.2rem; letter-spacing: 0.18em; font-weight: 700; }
-    .actions { display: flex; gap: 12px; align-items: center; }
+    .brand { font-size: 1.15rem; letter-spacing: 0.18em; font-weight: 700; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 0; }
+    .tab {
+      border: 1px solid var(--stroke); background: transparent; color: var(--muted);
+      border-radius: 999px; padding: 9px 14px; cursor: pointer; font-weight: 700;
+    }
+    .tab.active { color: var(--text); border-color: rgba(126,224,184,0.45); background: rgba(126,224,184,0.08); }
     .btn {
-      border: 1px solid var(--stroke); border-radius: 12px; padding: 11px 18px; color: var(--text);
+      border: 1px solid var(--stroke); border-radius: 12px; padding: 9px 14px; color: var(--text);
       background: rgba(255,255,255,0.02); cursor: pointer; font-weight: 700;
     }
     .btn.primary { background: linear-gradient(135deg, #183f34, #0f2f2d); border-color: rgba(126,224,184,0.4); }
-    .btn.danger { background: rgba(255,180,180,0.04); border-color: rgba(255,180,180,0.3); }
-    .grid {
-      display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-top: 26px;
-    }
+    .btn.danger { background: rgba(255,180,180,0.04); border-color: rgba(255,180,180,0.3); color: var(--danger); }
+    .btn.small { padding: 7px 10px; font-size: 0.82rem; }
+    .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px; margin-top: 22px; }
     .panel {
       background: rgba(16,29,27,0.85); border: 1px solid var(--stroke); border-radius: 18px; overflow: hidden;
-      box-shadow: 0 12px 18px rgba(0,0,0,0.15);
     }
-    .panel-head { padding: 18px 20px; border-bottom: 1px solid var(--stroke); }
-    .panel-body { padding: 20px; }
+    .panel.full { grid-column: 1 / -1; }
+    .panel-head { padding: 16px 18px; border-bottom: 1px solid var(--stroke); display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .panel-body { padding: 18px; overflow: auto; }
     h1, h2, h3 { margin: 0; }
     .muted { color: var(--muted); }
     table { width: 100%; border-collapse: collapse; }
-    th, td {
-      text-align: left; vertical-align: top; padding: 12px 10px; border-bottom: 1px solid var(--stroke);
-      font-size: 0.95rem;
-    }
-    th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    th, td { text-align: left; vertical-align: top; padding: 11px 8px; border-bottom: 1px solid var(--stroke); font-size: 0.92rem; }
+    th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
     .badge {
-      display: inline-block; padding: 5px 8px; border-radius: 999px; font-size: 0.72rem;
+      display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 0.72rem;
       border: 1px solid var(--stroke); background: rgba(255,255,255,0.02); color: var(--success);
     }
     .badge.warn { color: var(--danger); }
-    form { display: grid; gap: 14px; }
-    label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-    input, select {
-      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--stroke);
+    .badge.pending { color: var(--warn); }
+    form, .stack { display: grid; gap: 12px; }
+    label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); display: block; margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid var(--stroke);
       background: rgba(255,255,255,0.02); color: var(--text); font-size: 1rem;
     }
+    textarea { min-height: 80px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .notice {
       border: 1px solid rgba(126,224,184,0.25); border-radius: 12px; background: rgba(126,224,184,0.05);
       color: var(--success); padding: 12px 14px; line-height: 1.45;
     }
+    .notice.error { border-color: rgba(255,180,180,0.35); background: rgba(255,180,180,0.04); color: var(--danger); }
     .hidden { display: none; }
-    @media (max-width: 880px) {
-      .grid { grid-template-columns: 1fr; }
+    .wallet { word-break: break-all; font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    @media (max-width: 980px) {
+      .grid, .row { grid-template-columns: 1fr; }
       header { flex-direction: column; align-items: flex-start; }
     }
   </style>
@@ -86,97 +93,134 @@
       </div>
     </header>
 
-    <div class="grid">
-      <section class="panel">
-        <div class="panel-head">
-          <h2>Account list</h2>
-        </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="accounts">Accounts</button>
+      <button class="tab" data-tab="funding">Funding</button>
+      <button class="tab" data-tab="withdrawals">Withdrawals</button>
+      <button class="tab" data-tab="wallets">Wallets</button>
+    </div>
+
+    <div id="globalNotice" class="notice hidden" style="margin-top:18px"></div>
+
+    <section class="grid tab-panel" id="panel-accounts">
+      <div class="panel">
+        <div class="panel-head"><h2>Users</h2></div>
         <div class="panel-body">
           <table>
             <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Balance</th>
-                <th>Verified</th>
-                <th>Action</th>
-              </tr>
+              <tr><th>Name</th><th>Email</th><th>Balance</th><th>Status</th><th></th></tr>
             </thead>
             <tbody id="userTableBody"></tbody>
           </table>
         </div>
-      </section>
-
+      </div>
       <aside class="panel">
-        <div class="panel-head">
-          <h2>Credit account</h2>
-        </div>
+        <div class="panel-head"><h2>Edit account</h2></div>
         <div class="panel-body">
-          <form id="creditForm">
-            <div>
-              <label for="userSelect">User</label>
-              <select id="userSelect"></select>
+          <p class="muted" id="editEmpty">Select a user to edit name, email, role, balance, password, verification, or flags.</p>
+          <form id="editForm" class="hidden">
+            <input type="hidden" id="editUserId" />
+            <div class="row">
+              <div><label>Name</label><input id="editName" /></div>
+              <div><label>Email</label><input id="editEmail" type="email" /></div>
             </div>
-            <div>
-              <label for="creditAmount">Amount (USD)</label>
-              <input id="creditAmount" type="number" min="1" step="0.01" value="1000" />
+            <div class="row">
+              <div>
+                <label>Role</label>
+                <select id="editRole"><option value="user">User</option><option value="admin">Admin</option></select>
+              </div>
+              <div>
+                <label>Account status</label>
+                <select id="editStatus">
+                  <option value="active">Active</option>
+                  <option value="flagged">Flagged</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label for="creditNote">Note</label>
-              <input id="creditNote" type="text" maxlength="140" placeholder="Admin credit" />
+            <div class="row">
+              <div><label>Available cash (USD)</label><input id="editCash" type="number" min="0" step="0.01" /></div>
+              <div>
+                <label>Email verified</label>
+                <select id="editVerified"><option value="true">Verified</option><option value="false">Unverified</option></select>
+              </div>
             </div>
-            <button class="btn primary" type="submit">Add funds</button>
-            <div id="statusBox" class="notice hidden"></div>
+            <div><label>New password (optional)</label><input id="editPassword" type="password" placeholder="Leave blank to keep current password" /></div>
+            <div><label>Admin notes</label><textarea id="editNotes"></textarea></div>
+            <div><label>Flag reason</label><input id="editFlagReason" placeholder="Required when flagging" /></div>
+            <div class="btn-row">
+              <button class="btn primary" type="submit">Save changes</button>
+              <button class="btn danger" type="button" id="flagBtn">Flag account</button>
+              <button class="btn" type="button" id="unflagBtn">Clear flag</button>
+            </div>
+            <div class="row">
+              <div><label>Credit amount</label><input id="creditAmount" type="number" min="0.01" step="0.01" value="1000" /></div>
+              <div><label>Debit amount</label><input id="debitAmount" type="number" min="0.01" step="0.01" value="100" /></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn" type="button" id="creditBtn">Credit</button>
+              <button class="btn danger" type="button" id="debitBtn">Debit</button>
+            </div>
           </form>
         </div>
       </aside>
+    </section>
 
-      <section class="panel">
-        <div class="panel-head"><h2>Withdrawal requests</h2></div>
+    <section class="grid tab-panel hidden" id="panel-funding">
+      <div class="panel full">
+        <div class="panel-head"><h2>Funding requests</h2><span class="muted">Approve credits the user balance</span></div>
         <div class="panel-body">
           <table>
-            <thead><tr><th>User</th><th>Network</th><th>Wallet</th><th>Amount</th><th>Status</th></tr></thead>
+            <thead><tr><th>User</th><th>Network</th><th>Amount</th><th>Deposit address</th><th>Status</th><th></th></tr></thead>
+            <tbody id="fundingTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid tab-panel hidden" id="panel-withdrawals">
+      <div class="panel full">
+        <div class="panel-head"><h2>Withdrawal requests</h2><span class="muted">Approve sends the ledger debit after you pay the wallet</span></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>User</th><th>Network</th><th>Wallet</th><th>Amount</th><th>Status</th><th></th></tr></thead>
             <tbody id="withdrawalTableBody"></tbody>
           </table>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <aside class="panel">
-        <div class="panel-head">
-          <h2>Record reward</h2>
-        </div>
+    <section class="grid tab-panel hidden" id="panel-wallets">
+      <div class="panel">
+        <div class="panel-head"><h2>Live deposit wallets</h2></div>
         <div class="panel-body">
-          <p class="muted">Rewards must be backed by a verified revenue or settlement reference. This records a Reward ledger entry; it does not create an automatic return.</p>
-          <form id="rewardForm">
+          <p class="muted">Users see these addresses the next time they open Add funds. Changes apply immediately.</p>
+          <div id="walletList" class="stack" style="margin-top:16px"></div>
+        </div>
+      </div>
+      <aside class="panel">
+        <div class="panel-head"><h2>Add or replace a wallet</h2></div>
+        <div class="panel-body">
+          <form id="walletForm">
+            <div><label>Network id</label><input id="walletNetwork" placeholder="bitcoin" /></div>
+            <div><label>Display name</label><input id="walletName" placeholder="Bitcoin" /></div>
+            <div><label>Receive address</label><input id="walletAddress" class="wallet" /></div>
             <div>
-              <label for="rewardUserSelect">User</label>
-              <select id="rewardUserSelect"></select>
+              <label>Active</label>
+              <select id="walletActive"><option value="true">Shown to users</option><option value="false">Hidden</option></select>
             </div>
-            <div>
-              <label for="rewardAmount">Amount (USD)</label>
-              <input id="rewardAmount" type="number" min="0.01" step="0.01" value="100" />
-            </div>
-            <div>
-              <label for="rewardReference">Settlement reference</label>
-              <input id="rewardReference" type="text" maxlength="160" placeholder="provider-settlement-id" required />
-            </div>
-            <div>
-              <label for="rewardNote">Note</label>
-              <input id="rewardNote" type="text" maxlength="140" placeholder="Verified revenue reward" />
-            </div>
-            <button class="btn primary" type="submit">Record reward</button>
-            <div id="rewardStatusBox" class="notice hidden"></div>
+            <button class="btn primary" type="submit">Save wallet</button>
           </form>
         </div>
       </aside>
-    </div>
+    </section>
   </div>
 
   <script>
     const $ = id => document.getElementById(id);
     const money = n => '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let selectedUserId = null;
 
     async function api(url, opt = {}) {
       const r = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, ...opt });
@@ -185,125 +229,233 @@
       return d;
     }
 
-    function setStatus(message, type = 'success') {
-      const box = $('statusBox');
+    function notice(message, type = 'success') {
+      const box = $('globalNotice');
       box.textContent = message;
-      box.classList.remove('hidden');
-      box.style.borderColor = type === 'error' ? 'rgba(255,180,180,0.35)' : 'rgba(126,224,184,0.25)';
-      box.style.color = type === 'error' ? '#ffb4b4' : '#baf8db';
-      box.style.background = type === 'error' ? 'rgba(255,180,180,0.04)' : 'rgba(126,224,184,0.05)';
+      box.classList.remove('hidden', 'error');
+      if (type === 'error') box.classList.add('error');
+    }
+
+    function statusBadge(user) {
+      if (user.accountStatus === 'suspended') return '<span class="badge warn">Suspended</span>';
+      if (user.flagged || user.accountStatus === 'flagged') return '<span class="badge warn">Flagged</span>';
+      if (!user.emailVerified) return '<span class="badge pending">Unverified</span>';
+      return '<span class="badge">Active</span>';
+    }
+
+    function requestBadge(status) {
+      const warn = status === 'Pending' || status === 'Declined';
+      return `<span class="badge ${warn ? (status === 'Pending' ? 'pending' : 'warn') : ''}">${esc(status)}</span>`;
     }
 
     function renderUsers(users) {
-      const tbody = $('userTableBody');
-      const select = $('userSelect');
-      const rewardSelect = $('rewardUserSelect');
-      const orderedUsers = [...users].sort((a, b) => Number(a.role === 'admin') - Number(b.role === 'admin'));
-      tbody.innerHTML = orderedUsers.map(user => `
+      $('userTableBody').innerHTML = users.map(user => `
         <tr>
-          <td>${esc(user.name)}</td>
+          <td>${esc(user.name)}<br><span class="muted">${esc(user.role)}</span></td>
           <td>${esc(user.email)}</td>
-          <td><span class="badge ${user.role === 'admin' ? '' : 'warn'}">${esc(user.role || 'user')}</span></td>
           <td>${money(user.cash)}</td>
-          <td>${user.email_verified_at ? '<span class="badge">Verified</span>' : '<span class="badge warn">Unverified</span>'}</td>
-          <td><button class="btn" type="button" onclick="selectUser(${user.id})">Credit</button></td>
+          <td>${statusBadge(user)}</td>
+          <td><button class="btn small" type="button" onclick="selectUser(${user.id})">Manage</button></td>
         </tr>
-      `).join('');
-
-      select.innerHTML = orderedUsers.map(user => `<option value="${user.id}">${esc(user.name)} — ${esc(user.email)} · ${money(user.cash)}</option>`).join('');
-      rewardSelect.innerHTML = select.innerHTML;
-      const firstRegularUser = orderedUsers.find(user => user.role !== 'admin');
-      if (firstRegularUser) {
-        select.value = String(firstRegularUser.id);
-        rewardSelect.value = String(firstRegularUser.id);
-      }
+      `).join('') || '<tr><td colspan="5" class="muted">No users.</td></tr>';
     }
 
-    function selectUser(userId) {
-      $('userSelect').value = String(userId);
-      $('rewardUserSelect').value = String(userId);
-      $('creditAmount').focus();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    async function selectUser(userId) {
+      const data = await api('/api/admin/users/' + userId);
+      const user = data.user;
+      selectedUserId = user.id;
+      $('editEmpty').classList.add('hidden');
+      $('editForm').classList.remove('hidden');
+      $('editUserId').value = user.id;
+      $('editName').value = user.name;
+      $('editEmail').value = user.email;
+      $('editRole').value = user.role;
+      $('editStatus').value = user.accountStatus || 'active';
+      $('editCash').value = user.cash;
+      $('editVerified').value = String(Boolean(user.emailVerified));
+      $('editNotes').value = user.adminNotes || '';
+      $('editFlagReason').value = user.flagReason || '';
+      $('editPassword').value = '';
     }
 
-    async function loadAdmins() {
-      const data = await api('/api/admin/users');
-      renderUsers(data.users || []);
-      const withdrawals = await api('/api/admin/withdrawals');
-      $('withdrawalTableBody').innerHTML = (withdrawals.withdrawals || []).map(item => `
-        <tr><td>${esc(item.name)}<br><span class="muted">${esc(item.email)}</span></td><td>${esc(item.network)}</td><td style="word-break:break-all;max-width:260px">${esc(item.wallet_address)}</td><td>${money(item.amount)}</td><td><span class="badge warn">${esc(item.status)}</span></td></tr>
-      `).join('') || '<tr><td colspan="5" class="muted">No withdrawal requests.</td></tr>';
+    function renderRequests(tbodyId, rows, kind) {
+      const body = $(tbodyId);
+      body.innerHTML = rows.length ? rows.map(item => `
+        <tr>
+          <td>${esc(item.name)}<br><span class="muted">${esc(item.email)}</span></td>
+          <td>${esc(item.network)}</td>
+          ${kind === 'withdrawals' ? `<td class="wallet">${esc(item.wallet_address)}</td>` : ''}
+          <td>${money(item.amount)}</td>
+          ${kind === 'funding' ? `<td class="wallet">${esc(item.deposit_address)}</td>` : ''}
+          <td>${requestBadge(item.status)}</td>
+          <td>${item.status === 'Pending' ? `<div class="btn-row">
+            <button class="btn small primary" onclick="review('${kind}', ${item.id}, 'approve')">Accept</button>
+            <button class="btn small danger" onclick="review('${kind}', ${item.id}, 'decline')">Decline</button>
+          </div>` : ''}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="6" class="muted">No ${kind} requests.</td></tr>`;
     }
 
-    async function ensureAdmin() {
-      const me = await api('/api/me');
-      if (!me.authenticated) {
-        window.location.href = '/';
-        return false;
-      }
-      if (me.user.role !== 'admin') {
-        window.location.href = '/';
-        return false;
-      }
-      return true;
+    function renderWallets(wallets) {
+      $('walletList').innerHTML = wallets.map(wallet => `
+        <form class="wallet-edit" data-network="${esc(wallet.network)}">
+          <strong>${esc(wallet.name)}</strong> <span class="muted">${esc(wallet.network)} · ${wallet.active ? 'live' : 'hidden'}</span>
+          <label>Display name</label>
+          <input name="name" value="${esc(wallet.name)}" />
+          <label>Address</label>
+          <input name="address" class="wallet" value="${esc(wallet.address)}" />
+          <label>Visibility</label>
+          <select name="active"><option value="true" ${wallet.active ? 'selected' : ''}>Shown to users</option><option value="false" ${wallet.active ? '' : 'selected'}>Hidden</option></select>
+          <button class="btn primary" type="submit">Update ${esc(wallet.name)}</button>
+        </form>
+      `).join('') || '<p class="muted">No wallets configured.</p>';
     }
 
-    document.getElementById('creditForm').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const userId = $('userSelect').value;
-      const amount = Number($('creditAmount').value);
-      const note = $('creditNote').value.trim();
+    async function review(kind, id, decision) {
       try {
-        const res = await api(`/api/admin/users/${userId}/credit`, {
-          method: 'POST',
-          body: JSON.stringify({ amount, note })
-        });
-        setStatus(`Credit applied successfully: ${money(res.amount)} to ${userId}.`);
-        $('creditAmount').value = '1000';
-        $('creditNote').value = '';
-        await loadAdmins();
+        const note = prompt(decision === 'approve' ? 'Optional review note' : 'Reason for decline') || '';
+        await api(`/api/admin/${kind}/${id}/${decision}`, { method: 'POST', body: JSON.stringify({ note }) });
+        notice(`${kind === 'funding' ? 'Funding' : 'Withdrawal'} ${decision === 'approve' ? 'accepted' : 'declined'}.`);
+        await loadAll();
       } catch (error) {
-        setStatus(error.message, 'error');
+        notice(error.message, 'error');
       }
+    }
+
+    async function loadAll() {
+      const [users, funding, withdrawals, wallets] = await Promise.all([
+        api('/api/admin/users'),
+        api('/api/admin/funding'),
+        api('/api/admin/withdrawals'),
+        api('/api/admin/wallets')
+      ]);
+      renderUsers(users.users || []);
+      renderRequests('fundingTableBody', funding.funding || [], 'funding');
+      renderRequests('withdrawalTableBody', withdrawals.withdrawals || [], 'withdrawals');
+      renderWallets(wallets.wallets || []);
+      if (selectedUserId) {
+        try { await selectUser(selectedUserId); } catch (_) { selectedUserId = null; }
+      }
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+        tab.classList.add('active');
+        $('panel-' + tab.dataset.tab).classList.remove('hidden');
+      });
     });
 
-    document.getElementById('rewardForm').addEventListener('submit', async (event) => {
+    $('editForm').addEventListener('submit', async event => {
       event.preventDefault();
-      const userId = $('rewardUserSelect').value;
-      const amount = Number($('rewardAmount').value);
-      const reference = $('rewardReference').value.trim();
-      const note = $('rewardNote').value.trim();
       try {
-        const res = await api(`/api/admin/users/${userId}/reward`, {
-          method: 'POST',
-          body: JSON.stringify({ amount, reference, note })
+        const userId = $('editUserId').value;
+        await api('/api/admin/users/' + userId, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: $('editName').value,
+            email: $('editEmail').value,
+            role: $('editRole').value,
+            accountStatus: $('editStatus').value,
+            cash: Number($('editCash').value),
+            emailVerified: $('editVerified').value === 'true',
+            adminNotes: $('editNotes').value,
+            password: $('editPassword').value || undefined
+          })
         });
-        setStatus(`Reward recorded: ${money(res.amount)} for settlement ${res.reference}.`);
-        $('rewardReference').value = '';
-        $('rewardNote').value = '';
-        await loadAdmins();
-      } catch (error) {
-        const box = $('rewardStatusBox');
-        box.textContent = error.message;
-        box.classList.remove('hidden');
-        box.style.color = '#ffb4b4';
-      }
+        notice('Account updated.');
+        await loadAll();
+      } catch (error) { notice(error.message, 'error'); }
+    });
+
+    $('flagBtn').addEventListener('click', async () => {
+      try {
+        const reason = $('editFlagReason').value.trim();
+        await api('/api/admin/users/' + $('editUserId').value + '/flag', { method: 'POST', body: JSON.stringify({ reason }) });
+        notice('Account flagged. Funding and withdrawals are blocked.');
+        await loadAll();
+      } catch (error) { notice(error.message, 'error'); }
+    });
+
+    $('unflagBtn').addEventListener('click', async () => {
+      try {
+        await api('/api/admin/users/' + $('editUserId').value + '/unflag', { method: 'POST' });
+        notice('Flag cleared.');
+        await loadAll();
+      } catch (error) { notice(error.message, 'error'); }
+    });
+
+    $('creditBtn').addEventListener('click', async () => {
+      try {
+        const amount = Number($('creditAmount').value);
+        await api('/api/admin/users/' + $('editUserId').value + '/credit', { method: 'POST', body: JSON.stringify({ amount, note: 'Admin credit' }) });
+        notice('Credit applied.');
+        await loadAll();
+      } catch (error) { notice(error.message, 'error'); }
+    });
+
+    $('debitBtn').addEventListener('click', async () => {
+      try {
+        const amount = Number($('debitAmount').value);
+        await api('/api/admin/users/' + $('editUserId').value + '/debit', { method: 'POST', body: JSON.stringify({ amount, note: 'Admin debit' }) });
+        notice('Debit applied.');
+        await loadAll();
+      } catch (error) { notice(error.message, 'error'); }
+    });
+
+    $('walletForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      try {
+        const network = $('walletNetwork').value.trim().toLowerCase();
+        await api('/api/admin/wallets/' + encodeURIComponent(network), {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: $('walletName').value,
+            address: $('walletAddress').value,
+            active: $('walletActive').value === 'true'
+          })
+        });
+        notice('Wallet saved. Users will see it on the next Add funds request.');
+        $('walletNetwork').value = '';
+        $('walletName').value = '';
+        $('walletAddress').value = '';
+        await loadAll();
+      } catch (error) { notice(error.message, 'error'); }
+    });
+
+    document.addEventListener('submit', async event => {
+      const form = event.target.closest('.wallet-edit');
+      if (!form) return;
+      event.preventDefault();
+      try {
+        await api('/api/admin/wallets/' + encodeURIComponent(form.dataset.network), {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: form.querySelector('[name="name"]').value,
+            address: form.querySelector('[name="address"]').value,
+            active: form.querySelector('[name="active"]').value === 'true'
+          })
+        });
+        notice('Wallet updated in realtime.');
+        await loadAll();
+      } catch (error) { notice(error.message, 'error'); }
     });
 
     $('logoutBtn').addEventListener('click', async () => {
-      try {
-        await api('/api/logout', { method: 'POST' });
-        window.location.href = '/';
-      } catch (error) {
-        window.location.href = '/';
-      }
+      try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
+      window.location.href = '/';
     });
 
     (async function init() {
       try {
-        if (!(await ensureAdmin())) return;
-        await loadAdmins();
-      } catch (error) {
+        const me = await api('/api/me');
+        if (!me.authenticated || me.user.role !== 'admin') {
+          window.location.href = '/';
+          return;
+        }
+        await loadAll();
+      } catch (_) {
         window.location.href = '/';
       }
     })();

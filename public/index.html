@@ -124,9 +124,10 @@ footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:1
 </section>
 
 <section class="container dashboard-view" id="dashboardView">
+ <div id="restrictionNotice" class="notice" style="display:none;margin-bottom:18px"></div>
  <div class="dashboard-head"><div><div class="kicker">Professional account</div><h1 id="dashboardGreeting">Portfolio overview</h1><p class="muted">Review available cash, product access, funding requests, and account activity.</p></div><div class="dashboard-actions"><button class="btn" onclick="openFunding()">＋ Add funds</button><button class="btn" onclick="openWithdraw()">Withdraw</button><button class="btn primary" onclick="scrollToId('activity')">View activity</button></div></div>
  <div class="dashboard-grid">
-  <article class="dashboard-card"><h3>Available cash</h3><div class="dashboard-value" id="dashboardBalance">$0.00</div><div class="dashboard-meta"><span>Account currency<strong>USD</strong></span><span>Account status<strong>Active</strong></span><span>Pending withdrawals<strong id="dashboardPending">$0.00</strong></span></div></article>
+  <article class="dashboard-card"><h3>Available cash</h3><div class="dashboard-value" id="dashboardBalance">$0.00</div><div class="dashboard-meta"><span>Account currency<strong>USD</strong></span><span>Account status<strong id="dashboardStatus">Active</strong></span><span>Pending withdrawals<strong id="dashboardPending">$0.00</strong></span></div></article>
   <article class="dashboard-card"><h3>Portfolio framework</h3><div class="dashboard-list"><div><span>Digital assets</span><b>45%</b></div><div><span>Infrastructure</span><b>25%</b></div><div><span>Private credit</span><b>20%</b></div><div><span>Cash reserve</span><b>10%</b></div></div><p class="muted">Reference allocation only. Verified live product data will appear after approval.</p></article>
  </div>
 </section>
@@ -215,13 +216,13 @@ deposit:['FUNDING','Fund your account','']};
 const x=d[type]||d.learn;$('modalKicker').textContent=x[0];$('modalTitle').textContent=x[1];$('modalBody').innerHTML=x[2];$('modalBack').classList.add('show')}
 function updateAuthUi(){const actions=$('authActions');document.body.classList.toggle('logged-in',Boolean(currentUser));if(currentUser){$('accountName').textContent=currentUser.name;$('dashboardGreeting').textContent='Welcome, '+currentUser.name;$('accountBar').classList.add('show');const adminLink=currentUser.role==='admin'?'<a class="admin-link" href="/admin.html">Admin</a>':'';actions.innerHTML='<button class="btn ghost" onclick="scrollToId(\'activity\')">Dashboard</button><button class="btn" onclick="openWithdraw()">Withdraw</button><button class="btn primary" onclick="openFunding()">Add funds</button>'+adminLink}else{$('accountBar').classList.remove('show');actions.innerHTML='<button class="btn ghost" onclick="openModal(\'login\')">Log in</button><button class="btn primary" onclick="openModal(\'signup\')">Get started</button>'}}
 async function loadDepositNetworks(){
-  if(depositNetworks.length) return depositNetworks;
   const d=await api('/api/deposit-addresses');
   depositNetworks=d.networks||[];
   return depositNetworks;
 }
 function networkOptions(selected){
-  return WITHDRAW_NETWORKS.map(id=>`<option value="${id}"${id===selected?' selected':''}>${NETWORK_LABELS[id]}</option>`).join('');
+  const list=depositNetworks.length?depositNetworks:WITHDRAW_NETWORKS.map(id=>({id,name:NETWORK_LABELS[id]}));
+  return list.map(n=>`<option value="${esc(n.id)}"${n.id===selected?' selected':''}>${esc(n.name||NETWORK_LABELS[n.id]||n.id)}</option>`).join('');
 }
 async function openFunding(){
   if(!currentUser){fundingAfterLogin=true;openModal('login');return}
@@ -240,12 +241,14 @@ async function openFunding(){
   }
 }
 function updateWithdrawHint(){const input=$('withdrawWallet');if(input)input.placeholder=WALLET_HINTS[$('withdrawNetwork').value]||'Wallet address'}
-function openWithdraw(){
+async function openWithdraw(){
   if(!currentUser){withdrawAfterLogin=true;openModal('login');return}
+  try{await loadDepositNetworks()}catch(_){}
+  const first=depositNetworks[0]?.id||'bitcoin';
   const verifiedNote=emailVerified?'':'<div class="notice">Verify your email before requesting a withdrawal.</div>';
   $('modalKicker').textContent='WITHDRAWAL';
   $('modalTitle').textContent='Request a withdrawal';
-  $('modalBody').innerHTML=`<p class="muted">Enter the destination wallet and amount. Available cash: <b>${money(availableCash)}</b>.</p><label>Network</label><select id="withdrawNetwork" onchange="updateWithdrawHint()">${networkOptions('bitcoin')}</select><label>Wallet address</label><input id="withdrawWallet" class="wallet-input" spellcheck="false" autocomplete="off" placeholder="${WALLET_HINTS.bitcoin}"><label>Amount (USD)</label><input id="withdrawAmount" type="number" min="0.01" step="0.01" value="${availableCash>0?availableCash:''}"><div class="notice">Requests stay pending until they are reviewed. Only use an address you control on the selected network.</div>${verifiedNote}<button class="btn primary" style="width:100%;margin-top:18px" onclick="submitWithdraw()">Submit withdrawal</button><div id="modalMsg"></div>`;
+  $('modalBody').innerHTML=`<p class="muted">Enter the destination wallet and amount. Available cash: <b>${money(availableCash)}</b>.</p><label>Network</label><select id="withdrawNetwork" onchange="updateWithdrawHint()">${networkOptions(first)}</select><label>Wallet address</label><input id="withdrawWallet" class="wallet-input" spellcheck="false" autocomplete="off" placeholder="${WALLET_HINTS[first]||'Wallet address'}"><label>Amount (USD)</label><input id="withdrawAmount" type="number" min="0.01" step="0.01" value="${availableCash>0?availableCash:''}"><div class="notice">Requests stay pending until they are reviewed. Only use an address you control on the selected network.</div>${verifiedNote}<button class="btn primary" style="width:100%;margin-top:18px" onclick="submitWithdraw()">Submit withdrawal</button><div id="modalMsg"></div>`;
   $('modalBack').classList.add('show');
 }
 async function submitWithdraw(){
@@ -282,7 +285,7 @@ async function copyDepositAddress(){
 }
 async function register(){try{let d=await api('/api/register',{method:'POST',body:JSON.stringify({name:$('signupName').value,email:$('signupEmail').value,password:$('signupPassword').value})});currentUser=d.user;emailVerified=Boolean(d.user.emailVerified);updateAuthUi();closeModal();await loadDashboard();toast('Welcome, '+d.user.name+'.');if(fundingAfterLogin){fundingAfterLogin=false;openFunding()}else if(withdrawAfterLogin){withdrawAfterLogin=false;openWithdraw()}}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
 async function login(){try{let d=await api('/api/login',{method:'POST',body:JSON.stringify({email:$('loginEmail').value,password:$('loginPassword').value})});currentUser=d.user;emailVerified=Boolean(d.user.emailVerified);updateAuthUi();closeModal();await loadDashboard();toast('Welcome back, '+d.user.name+'.');if(fundingAfterLogin){fundingAfterLogin=false;openFunding()}else if(withdrawAfterLogin){withdrawAfterLogin=false;openWithdraw()}}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
-async function loadDashboard(){const d=await api('/api/dashboard');availableCash=Number(d.portfolio.available ?? d.portfolio.cash ?? 0);emailVerified=d.emailVerified!==false;const balance=money(availableCash);$('heroBalance').textContent=balance;$('dashboardBalance').textContent=balance;if($('dashboardPending'))$('dashboardPending').textContent=money(d.portfolio.pendingWithdrawal);document.querySelector('#activity tbody').innerHTML=d.activities.length?d.activities.map(a=>`<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join(''):`<tr><td colspan="4" class="muted">No activity yet. Fund your account to begin.</td></tr>`}
+async function loadDashboard(){const d=await api('/api/dashboard');availableCash=Number(d.portfolio.available ?? d.portfolio.cash ?? 0);emailVerified=d.emailVerified!==false;const balance=money(availableCash);$('heroBalance').textContent=balance;$('dashboardBalance').textContent=balance;if($('dashboardPending'))$('dashboardPending').textContent=money(d.portfolio.pendingWithdrawal);if($('dashboardStatus'))$('dashboardStatus').textContent=d.accountStatus==='suspended'?'Suspended':d.flagged?'Restricted':'Active';const notice=$('restrictionNotice');if(notice){if(d.accountStatus==='suspended'||d.flagged){notice.style.display='block';notice.textContent=d.accountStatus==='suspended'?'This account is suspended. Funding and withdrawals are unavailable.':(d.flagReason||'This account is restricted. Funding and withdrawals are unavailable.');}else notice.style.display='none'}document.querySelector('#activity tbody').innerHTML=d.activities.length?d.activities.map(a=>`<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join(''):`<tr><td colspan="4" class="muted">No activity yet. Fund your account to begin.</td></tr>`}
 async function loadSession(){try{const d=await api('/api/me');if(!d.authenticated){currentUser=null;updateAuthUi();return}currentUser=d.user;emailVerified=Boolean(d.user.emailVerified);updateAuthUi();await loadDashboard()}catch(_){currentUser=null;updateAuthUi()}}
 async function logout(){await api('/api/logout',{method:'POST'});currentUser=null;availableCash=0;emailVerified=false;$('heroBalance').textContent='$0.00';$('dashboardBalance').textContent='$0.00';if($('dashboardPending'))$('dashboardPending').textContent='$0.00';document.querySelector('#activity tbody').innerHTML='';updateAuthUi();toast('You have been logged out.')}
 async function requestFunding(){try{await api('/api/funding-request',{method:'POST',body:JSON.stringify({amount:pendingFunding.amount,network:pendingFunding.network})});closeModal();await loadDashboard();toast('Funding request submitted.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
