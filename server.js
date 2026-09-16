@@ -16,16 +16,19 @@ const isProduction = process.env.NODE_ENV === 'production';
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
 const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
+const onVercel = Boolean(process.env.VERCEL);
 
-if (isProduction && (!SESSION_SECRET || SESSION_SECRET.length < 32)) {
-  throw new Error('SESSION_SECRET must be at least 32 characters in production.');
+if (!onVercel) {
+  if (isProduction && (!SESSION_SECRET || SESSION_SECRET.length < 32)) {
+    throw new Error('SESSION_SECRET must be at least 32 characters in production.');
+  }
+  if (!DATABASE_URL) throw new Error('DATABASE_URL is required.');
 }
-if (!DATABASE_URL) throw new Error('DATABASE_URL is required.');
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
-  max: Number(process.env.DB_POOL_MAX || 10),
+  max: Number(process.env.DB_POOL_MAX || (onVercel ? 1 : 10)),
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000
 });
@@ -36,6 +39,25 @@ const money = cents => Number(cents || 0) / 100;
 const cents = amount => Math.round(Number(amount) * 100);
 const tokenHash = token => crypto.createHash('sha256').update(token).digest('hex');
 const makeToken = () => crypto.randomBytes(32).toString('hex');
+const walletPatterns = {
+  bitcoin: /^(bc1[ac-hj-np-z02-9]{11,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/,
+  ethereum: /^0x[a-fA-F0-9]{40}$/,
+  solana: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+  xrp: /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/,
+  stellar: /^G[A-Z2-7]{55}$/,
+  zcash: /^(t1|t3)[a-zA-Z0-9]{33}$/
+};
+const depositAddresses = {
+  bitcoin: { name: 'Bitcoin', address: 'bc1qymu6sdct5zehsg9tghnswn3pqt88kkcddss2gz' },
+  ethereum: { name: 'Ethereum', address: '0x0207ac5E02613c726610a0f88f14619ddbe164f1' },
+  solana: { name: 'Solana', address: '2CQ4hAJAdGMck42XAunaxjUdWeeFHHjvNVpSq9BBBvrU' },
+  xrp: { name: 'XRP', address: 'rLx5MED8Fh3VQenyEdQDt4fEy7YGemrQV9' },
+  stellar: { name: 'Stellar', address: 'GAHM5IJJEF3MUH7KGNKVCI7R66XYGLJVA5FXM55ST3LITOUXRAY7GPO4' },
+  zcash: { name: 'Zcash', address: 't1MLXZDifNbQtVCrB4KzcbiXzitUqEKA2vu' }
+};
+for (const [network, info] of Object.entries(depositAddresses)) {
+  if (!walletPatterns[network]?.test(info.address)) throw new Error(`Invalid deposit address configured for ${network}.`);
+}
 const mailer = process.env.SMTP_HOST ? nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
@@ -52,6 +74,10 @@ const audit = async (req, action, metadata = {}) => {
 };
 
 async function initDb() {
+  if (isProduction && (!SESSION_SECRET || SESSION_SECRET.length < 32)) {
+    throw new Error('SESSION_SECRET must be at least 32 characters in production.');
+  }
+  if (!DATABASE_URL) throw new Error('DATABASE_URL is required.');
   await q(`
     CREATE TABLE IF NOT EXISTS users (
       id BIGSERIAL PRIMARY KEY,
@@ -108,14 +134,37 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs(created_at DESC);
+    CREATE TABLE IF NOT EXISTS withdrawal_requests (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      network TEXT NOT NULL,
+      wallet_address TEXT NOT NULL,
+      amount_cents BIGINT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending',
+      reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS withdrawal_requests_user_id_idx ON withdrawal_requests(user_id, id DESC);
   `);
   if (process.env.ADMIN_EMAIL) await q('UPDATE users SET role=\'admin\' WHERE email=$1', [email(process.env.ADMIN_EMAIL)]);
 }
+
+const dbReady = initDb().catch(err => {
+  console.error('Database initialization failed:', err);
+  throw err;
+});
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '100kb' }));
+app.use((req, res, next) => {
+  dbReady.then(() => next()).catch(() => {
+    if (req.path.startsWith('/api/')) return res.status(503).json({ error: 'Service unavailable' });
+    res.status(503).send('Service unavailable');
+  });
+});
 app.use((req, res, next) => { res.on('finish', () => { if (req.path.startsWith('/api/')) console.log(`${req.method} ${req.path} ${res.statusCode}`); }); next(); });
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false });
@@ -146,7 +195,7 @@ function admin(req, res, next) {
 
 async function verified(req, res, next) {
   const result = await q('SELECT email_verified_at FROM users WHERE id=$1', [req.session.userId]);
-  if (!result.rows[0]?.email_verified_at) return res.status(403).json({ error: 'Verify your email before requesting funding or allocations.' });
+  if (!result.rows[0]?.email_verified_at) return res.status(403).json({ error: 'Verify your email before requesting funding, allocations, or withdrawals.' });
   next();
 }
 
@@ -158,6 +207,12 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   const result = await q("SELECT slug,name,category,description,risk_level,minimum_cents,status,verified_at FROM products WHERE status='active' AND verified_at IS NOT NULL ORDER BY id");
   res.json({ products: result.rows.map(product => ({ ...product, minimum: money(product.minimum_cents) })) });
+});
+
+app.get('/api/deposit-addresses', auth, (req, res) => {
+  res.json({
+    networks: Object.entries(depositAddresses).map(([id, value]) => ({ id, name: value.name, address: value.address }))
+  });
 });
 
 app.post('/api/register', async (req, res) => {
@@ -197,7 +252,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const e = email(req.body.email), pw = String(req.body.password || '');
-    const r = await q('SELECT id,name,email,password_hash,role FROM users WHERE email=$1', [e]);
+    const r = await q('SELECT id,name,email,password_hash,role,email_verified_at FROM users WHERE email=$1', [e]);
     const u = r.rows[0];
     if (!u || !(await bcrypt.compare(pw, u.password_hash))) return res.status(401).json({ error: 'Invalid email or password.' });
     req.session.regenerate(err => {
@@ -205,7 +260,7 @@ app.post('/api/login', async (req, res) => {
       req.session.userId = u.id;
       req.session.role = u.role;
       audit(req, 'account.login');
-      res.json({ user: { id: u.id, name: u.name, email: u.email } });
+      res.json({ user: { id: u.id, name: u.name, email: u.email, role: u.role, emailVerified: Boolean(u.email_verified_at) } });
     });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Unable to sign in.' }); }
 });
@@ -248,20 +303,57 @@ app.post('/api/password-reset/confirm', async (req, res) => {
 
 app.get('/api/me', async (req, res) => {
   if (!req.session.userId) return res.json({ authenticated: false });
-  const r = await q('SELECT id,name,email,created_at FROM users WHERE id=$1', [req.session.userId]);
+  const r = await q('SELECT id,name,email,role,email_verified_at,created_at FROM users WHERE id=$1', [req.session.userId]);
   if (!r.rows[0]) return res.status(401).json({ error: 'Account not found.' });
-  res.json({ authenticated: true, user: r.rows[0] });
+  const u = r.rows[0];
+  res.json({
+    authenticated: true,
+    user: { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, emailVerified: Boolean(u.email_verified_at) }
+  });
 });
 
 app.get('/api/dashboard', auth, async (req, res) => {
   const p = await q('SELECT cash_cents FROM portfolios WHERE user_id=$1', [req.session.userId]);
+  const pending = await q("SELECT COALESCE(SUM(amount_cents),0) AS amount FROM withdrawal_requests WHERE user_id=$1 AND status='Pending'", [req.session.userId]);
+  const user = await q('SELECT email_verified_at FROM users WHERE id=$1', [req.session.userId]);
   const a = await q('SELECT activity,type,amount_cents,status,created_at FROM activities WHERE user_id=$1 ORDER BY id DESC LIMIT 20', [req.session.userId]);
   const products = await q("SELECT slug,name,category,description,risk_level,minimum_cents FROM products WHERE status='active' AND verified_at IS NOT NULL ORDER BY id");
+  const cashCents = Number(p.rows[0]?.cash_cents || 0);
+  const pendingCents = Number(pending.rows[0]?.amount || 0);
+  const availableCents = Math.max(0, cashCents - pendingCents);
   res.json({
-    portfolio: { cash: money(p.rows[0]?.cash_cents) },
+    portfolio: { cash: money(cashCents), available: money(availableCents), pendingWithdrawal: money(pendingCents) },
+    emailVerified: Boolean(user.rows[0]?.email_verified_at),
     activities: a.rows.map(x => ({ ...x, amount: money(x.amount_cents) })),
     products: products.rows.map(x => ({ ...x, minimum: money(x.minimum_cents) }))
   });
+});
+
+app.post('/api/withdrawals', auth, verified, async (req, res) => {
+  const network = String(req.body.network || '').toLowerCase();
+  const walletAddress = String(req.body.walletAddress || '').trim();
+  const amount = Number(req.body.amount);
+  if (!walletPatterns[network] || !walletPatterns[network].test(walletAddress)) return res.status(400).json({ error: 'Enter a valid wallet address for the selected network.' });
+  if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Enter a valid withdrawal amount.' });
+
+  const amountCents = cents(amount);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const portfolio = await client.query('SELECT cash_cents FROM portfolios WHERE user_id=$1 FOR UPDATE', [req.session.userId]);
+    const pending = await client.query("SELECT COALESCE(SUM(amount_cents),0) AS amount FROM withdrawal_requests WHERE user_id=$1 AND status='Pending'", [req.session.userId]);
+    const availableCents = Number(portfolio.rows[0]?.cash_cents || 0) - Number(pending.rows[0]?.amount || 0);
+    if (amountCents > availableCents) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Insufficient available balance.' }); }
+    const request = await client.query('INSERT INTO withdrawal_requests(user_id,network,wallet_address,amount_cents) VALUES($1,$2,$3,$4) RETURNING id,network,wallet_address,amount_cents,status,created_at', [req.session.userId, network, walletAddress, amountCents]);
+    await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [req.session.userId, `Withdrawal request · ${network}`, 'Withdrawal', amountCents, 'Pending']);
+    await client.query('COMMIT');
+    await audit(req, 'withdrawal.requested', { withdrawalId: request.rows[0].id, network, amount, walletAddress });
+    res.status(201).json({ ok: true, withdrawal: { ...request.rows[0], amount: money(amountCents) } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Withdrawal request could not be created.' });
+  } finally { client.release(); }
 });
 
 app.get('/api/admin/audit-logs', auth, admin, async (req, res) => {
@@ -270,8 +362,79 @@ app.get('/api/admin/audit-logs', auth, admin, async (req, res) => {
 });
 
 app.get('/api/admin/users', auth, admin, async (req, res) => {
-  const result = await q('SELECT id,name,email,role,email_verified_at,created_at FROM users ORDER BY id DESC LIMIT 100');
-  res.json({ users: result.rows });
+  const result = await q(`
+    SELECT u.id,u.name,u.email,u.role,u.email_verified_at,u.created_at,p.cash_cents
+    FROM users u
+    LEFT JOIN portfolios p ON p.user_id = u.id
+    ORDER BY u.id DESC
+    LIMIT 100
+  `);
+  res.json({ users: result.rows.map(user => ({ ...user, cash: money(user.cash_cents) })) });
+});
+
+app.get('/api/admin/withdrawals', auth, admin, async (req, res) => {
+  const result = await q(`
+    SELECT w.id,w.user_id,w.network,w.wallet_address,w.amount_cents,w.status,w.created_at,u.name,u.email
+    FROM withdrawal_requests w
+    JOIN users u ON u.id=w.user_id
+    ORDER BY w.id DESC
+    LIMIT 200
+  `);
+  res.json({ withdrawals: result.rows.map(item => ({ ...item, amount: money(item.amount_cents) })) });
+});
+
+app.post('/api/admin/users/:id/credit', auth, admin, async (req, res) => {
+  const userId = Number(req.params.id);
+  const amount = Number(req.body.amount);
+  const note = String(req.body.note || '').trim();
+  if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Select a valid user.' });
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 10000000) return res.status(400).json({ error: 'Enter a credit amount between $0.01 and $10,000,000.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const user = await client.query('SELECT id,name,email FROM users WHERE id=$1 FOR UPDATE', [userId]);
+    if (!user.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'User not found.' }); }
+    const amountCents = cents(amount);
+    await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [amountCents, userId]);
+    await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [userId, note || 'Admin credit', 'Admin Credit', amountCents, 'Completed']);
+    await client.query('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [req.session.userId, 'user.balance_credited', { creditedUserId: userId, creditedUserEmail: user.rows[0].email, amount, note }]);
+    await client.query('COMMIT');
+    res.json({ ok: true, user: user.rows[0], amount: money(amountCents) });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Balance adjustment failed.' });
+  } finally { client.release(); }
+});
+
+app.post('/api/admin/users/:id/reward', auth, admin, async (req, res) => {
+  const userId = Number(req.params.id);
+  const amount = Number(req.body.amount);
+  const reference = String(req.body.reference || '').trim();
+  const note = String(req.body.note || '').trim();
+  if (!Number.isInteger(userId) || userId <= 0) return res.status(400).json({ error: 'Select a valid user.' });
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 10000000) return res.status(400).json({ error: 'Enter a reward amount between $0.01 and $10,000,000.' });
+  if (!reference || reference.length > 160) return res.status(400).json({ error: 'A verified settlement reference is required.' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const user = await client.query('SELECT id,name,email FROM users WHERE id=$1 FOR UPDATE', [userId]);
+    if (!user.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'User not found.' }); }
+    const duplicate = await client.query("SELECT id FROM activities WHERE type='Reward' AND activity=$1 LIMIT 1", [`Reward ${reference}`]);
+    if (duplicate.rows[0]) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'That settlement reference has already been recorded.' }); }
+    const amountCents = cents(amount);
+    await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [amountCents, userId]);
+    await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [userId, `Reward ${reference}`, 'Reward', amountCents, 'Completed']);
+    await client.query('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [req.session.userId, 'user.reward_recorded', { creditedUserId: userId, reference, amount, note }]);
+    await client.query('COMMIT');
+    res.json({ ok: true, user: user.rows[0], amount: money(amountCents), reference });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Reward could not be recorded.' });
+  } finally { client.release(); }
 });
 
 app.post('/api/admin/products', auth, admin, async (req, res) => {
@@ -294,11 +457,14 @@ app.post('/api/admin/products/:id/verify', auth, admin, async (req, res) => {
 // must call /api/webhooks/funding before settled funds become available.
 app.post('/api/funding-request', auth, verified, async (req, res) => {
   const n = Number(req.body.amount);
+  const network = String(req.body.network || '').toLowerCase();
+  const deposit = depositAddresses[network];
   if (!Number.isFinite(n) || n < 100 || n > 1000000) return res.status(400).json({ error: 'Amount must be between $100 and $1,000,000.' });
+  if (!deposit) return res.status(400).json({ error: 'Select a supported network.' });
   const c = cents(n);
-  await q('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [req.session.userId, 'USD Funding Request', 'Funding', c, 'Pending']);
-  await audit(req, 'funding.requested', { amount: n });
-  res.status(201).json({ ok: true, status: 'Pending' });
+  await q('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [req.session.userId, `USD Funding Request · ${deposit.name}`, 'Funding', c, 'Pending']);
+  await audit(req, 'funding.requested', { amount: n, network, depositAddress: deposit.address });
+  res.status(201).json({ ok: true, status: 'Pending', network, depositAddress: deposit.address });
 });
 
 app.post('/api/webhooks/funding', async (req, res) => {
@@ -340,12 +506,17 @@ app.post('/api/allocation', auth, verified, async (req, res) => {
   finally { client.release(); }
 });
 
+app.get('/admin.html', auth, admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-initDb().then(() => app.listen(PORT, () => console.log(`NovaBridge listening on ${PORT}`))).catch(err => {
-  console.error('Database initialization failed:', err);
-  process.exit(1);
-});
+module.exports = app;
+
+if (!onVercel) {
+  dbReady.then(() => app.listen(PORT, () => console.log(`NovaBridge listening on ${PORT}`))).catch(err => {
+    console.error('Database initialization failed:', err);
+    process.exit(1);
+  });
+}
 
 process.on('SIGTERM', async () => { await pool.end(); process.exit(0); });

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaBridge Admin</title>
+  <style>
+    :root {
+      --bg: #0a1211;
+      --panel: #101d1b;
+      --panel-2: #12211f;
+      --stroke: rgba(255,255,255,0.08);
+      --text: #edf6f3;
+      --muted: #a9c2ba;
+      --brand: #7ee0b8;
+      --brand-2: #9ad1ff;
+      --danger: #ffb4b4;
+      --success: #baf8db;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #0a1211, #111c1a 28%, #0d1414);
+      color: var(--text);
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 60px; }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px; padding: 16px 0 26px; border-bottom: 1px solid var(--stroke);
+    }
+    .brand { font-size: 1.2rem; letter-spacing: 0.18em; font-weight: 700; }
+    .actions { display: flex; gap: 12px; align-items: center; }
+    .btn {
+      border: 1px solid var(--stroke); border-radius: 12px; padding: 11px 18px; color: var(--text);
+      background: rgba(255,255,255,0.02); cursor: pointer; font-weight: 700;
+    }
+    .btn.primary { background: linear-gradient(135deg, #183f34, #0f2f2d); border-color: rgba(126,224,184,0.4); }
+    .btn.danger { background: rgba(255,180,180,0.04); border-color: rgba(255,180,180,0.3); }
+    .grid {
+      display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-top: 26px;
+    }
+    .panel {
+      background: rgba(16,29,27,0.85); border: 1px solid var(--stroke); border-radius: 18px; overflow: hidden;
+      box-shadow: 0 12px 18px rgba(0,0,0,0.15);
+    }
+    .panel-head { padding: 18px 20px; border-bottom: 1px solid var(--stroke); }
+    .panel-body { padding: 20px; }
+    h1, h2, h3 { margin: 0; }
+    .muted { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      text-align: left; vertical-align: top; padding: 12px 10px; border-bottom: 1px solid var(--stroke);
+      font-size: 0.95rem;
+    }
+    th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .badge {
+      display: inline-block; padding: 5px 8px; border-radius: 999px; font-size: 0.72rem;
+      border: 1px solid var(--stroke); background: rgba(255,255,255,0.02); color: var(--success);
+    }
+    .badge.warn { color: var(--danger); }
+    form { display: grid; gap: 14px; }
+    label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    input, select {
+      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.02); color: var(--text); font-size: 1rem;
+    }
+    .notice {
+      border: 1px solid rgba(126,224,184,0.25); border-radius: 12px; background: rgba(126,224,184,0.05);
+      color: var(--success); padding: 12px 14px; line-height: 1.45;
+    }
+    .hidden { display: none; }
+    @media (max-width: 880px) {
+      .grid { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">NOVABRIDGE ADMIN</div>
+      <div class="actions">
+        <button class="btn" onclick="location.href='/'">Return to site</button>
+        <button class="btn danger" id="logoutBtn">Log out</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Account list</h2>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Balance</th>
+                <th>Verified</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>Credit account</h2>
+        </div>
+        <div class="panel-body">
+          <form id="creditForm">
+            <div>
+              <label for="userSelect">User</label>
+              <select id="userSelect"></select>
+            </div>
+            <div>
+              <label for="creditAmount">Amount (USD)</label>
+              <input id="creditAmount" type="number" min="1" step="0.01" value="1000" />
+            </div>
+            <div>
+              <label for="creditNote">Note</label>
+              <input id="creditNote" type="text" maxlength="140" placeholder="Admin credit" />
+            </div>
+            <button class="btn primary" type="submit">Add funds</button>
+            <div id="statusBox" class="notice hidden"></div>
+          </form>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Withdrawal requests</h2></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>User</th><th>Network</th><th>Wallet</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="withdrawalTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>Record reward</h2>
+        </div>
+        <div class="panel-body">
+          <p class="muted">Rewards must be backed by a verified revenue or settlement reference. This records a Reward ledger entry; it does not create an automatic return.</p>
+          <form id="rewardForm">
+            <div>
+              <label for="rewardUserSelect">User</label>
+              <select id="rewardUserSelect"></select>
+            </div>
+            <div>
+              <label for="rewardAmount">Amount (USD)</label>
+              <input id="rewardAmount" type="number" min="0.01" step="0.01" value="100" />
+            </div>
+            <div>
+              <label for="rewardReference">Settlement reference</label>
+              <input id="rewardReference" type="text" maxlength="160" placeholder="provider-settlement-id" required />
+            </div>
+            <div>
+              <label for="rewardNote">Note</label>
+              <input id="rewardNote" type="text" maxlength="140" placeholder="Verified revenue reward" />
+            </div>
+            <button class="btn primary" type="submit">Record reward</button>
+            <div id="rewardStatusBox" class="notice hidden"></div>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const money = n => '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    async function api(url, opt = {}) {
+      const r = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, ...opt });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Request failed');
+      return d;
+    }
+
+    function setStatus(message, type = 'success') {
+      const box = $('statusBox');
+      box.textContent = message;
+      box.classList.remove('hidden');
+      box.style.borderColor = type === 'error' ? 'rgba(255,180,180,0.35)' : 'rgba(126,224,184,0.25)';
+      box.style.color = type === 'error' ? '#ffb4b4' : '#baf8db';
+      box.style.background = type === 'error' ? 'rgba(255,180,180,0.04)' : 'rgba(126,224,184,0.05)';
+    }
+
+    function renderUsers(users) {
+      const tbody = $('userTableBody');
+      const select = $('userSelect');
+      const rewardSelect = $('rewardUserSelect');
+      const orderedUsers = [...users].sort((a, b) => Number(a.role === 'admin') - Number(b.role === 'admin'));
+      tbody.innerHTML = orderedUsers.map(user => `
+        <tr>
+          <td>${esc(user.name)}</td>
+          <td>${esc(user.email)}</td>
+          <td><span class="badge ${user.role === 'admin' ? '' : 'warn'}">${esc(user.role || 'user')}</span></td>
+          <td>${money(user.cash)}</td>
+          <td>${user.email_verified_at ? '<span class="badge">Verified</span>' : '<span class="badge warn">Unverified</span>'}</td>
+          <td><button class="btn" type="button" onclick="selectUser(${user.id})">Credit</button></td>
+        </tr>
+      `).join('');
+
+      select.innerHTML = orderedUsers.map(user => `<option value="${user.id}">${esc(user.name)} — ${esc(user.email)} · ${money(user.cash)}</option>`).join('');
+      rewardSelect.innerHTML = select.innerHTML;
+      const firstRegularUser = orderedUsers.find(user => user.role !== 'admin');
+      if (firstRegularUser) {
+        select.value = String(firstRegularUser.id);
+        rewardSelect.value = String(firstRegularUser.id);
+      }
+    }
+
+    function selectUser(userId) {
+      $('userSelect').value = String(userId);
+      $('rewardUserSelect').value = String(userId);
+      $('creditAmount').focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function loadAdmins() {
+      const data = await api('/api/admin/users');
+      renderUsers(data.users || []);
+      const withdrawals = await api('/api/admin/withdrawals');
+      $('withdrawalTableBody').innerHTML = (withdrawals.withdrawals || []).map(item => `
+        <tr><td>${esc(item.name)}<br><span class="muted">${esc(item.email)}</span></td><td>${esc(item.network)}</td><td style="word-break:break-all;max-width:260px">${esc(item.wallet_address)}</td><td>${money(item.amount)}</td><td><span class="badge warn">${esc(item.status)}</span></td></tr>
+      `).join('') || '<tr><td colspan="5" class="muted">No withdrawal requests.</td></tr>';
+    }
+
+    async function ensureAdmin() {
+      const me = await api('/api/me');
+      if (!me.authenticated) {
+        window.location.href = '/';
+        return false;
+      }
+      if (me.user.role !== 'admin') {
+        window.location.href = '/';
+        return false;
+      }
+      return true;
+    }
+
+    document.getElementById('creditForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = $('userSelect').value;
+      const amount = Number($('creditAmount').value);
+      const note = $('creditNote').value.trim();
+      try {
+        const res = await api(`/api/admin/users/${userId}/credit`, {
+          method: 'POST',
+          body: JSON.stringify({ amount, note })
+        });
+        setStatus(`Credit applied successfully: ${money(res.amount)} to ${userId}.`);
+        $('creditAmount').value = '1000';
+        $('creditNote').value = '';
+        await loadAdmins();
+      } catch (error) {
+        setStatus(error.message, 'error');
+      }
+    });
+
+    document.getElementById('rewardForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = $('rewardUserSelect').value;
+      const amount = Number($('rewardAmount').value);
+      const reference = $('rewardReference').value.trim();
+      const note = $('rewardNote').value.trim();
+      try {
+        const res = await api(`/api/admin/users/${userId}/reward`, {
+          method: 'POST',
+          body: JSON.stringify({ amount, reference, note })
+        });
+        setStatus(`Reward recorded: ${money(res.amount)} for settlement ${res.reference}.`);
+        $('rewardReference').value = '';
+        $('rewardNote').value = '';
+        await loadAdmins();
+      } catch (error) {
+        const box = $('rewardStatusBox');
+        box.textContent = error.message;
+        box.classList.remove('hidden');
+        box.style.color = '#ffb4b4';
+      }
+    });
+
+    $('logoutBtn').addEventListener('click', async () => {
+      try {
+        await api('/api/logout', { method: 'POST' });
+        window.location.href = '/';
+      } catch (error) {
+        window.location.href = '/';
+      }
+    });
+
+    (async function init() {
+      try {
+        if (!(await ensureAdmin())) return;
+        await loadAdmins();
+      } catch (error) {
+        window.location.href = '/';
+      }
+    })();
+  </script>
+</body>
+</html>

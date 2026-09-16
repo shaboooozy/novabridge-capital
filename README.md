@@ -79,11 +79,25 @@ Open `http://localhost:3000`.
 
 ## Deployment
 
-The application is compatible with Node.js hosts that support Express and PostgreSQL.
+Public hosting uses **Vercel** (the website) and **Neon** (PostgreSQL). Both have free plans that sign up with GitHub and do not require a credit card.
 
-For a quick deployment, connect the repository to Render and use the included `render.yaml`. Set `DATABASE_URL`, `SESSION_SECRET`, and `FUNDING_WEBHOOK_SECRET` as secrets.
+1. Create a free Neon project at [neon.tech](https://neon.tech) and copy the pooled connection string (`DATABASE_URL`).
+2. Import this GitHub repository at [vercel.com/new](https://vercel.com/new).
+3. In the Vercel project, set:
 
-Render currently offers free web services, but its free web services spin down after inactivity and its free PostgreSQL databases expire after 30 days, so those free resources are suitable for testing/previewing rather than a durable financial production environment. Use a paid/persistent database before storing real customer funds or records that cannot be recreated.
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require
+DATABASE_SSL=true
+SESSION_SECRET=use-a-long-random-secret
+FUNDING_WEBHOOK_SECRET=use-a-separate-long-secret
+APP_URL=https://your-app.vercel.app
+ADMIN_EMAIL=you@example.com
+```
+
+4. Deploy. The public URL is `https://your-app.vercel.app`.
+
+A `render.yaml` is still included if you prefer Render, but Render may ask for a card.
 
 ## Security before real-money launch
 
