@@ -223,7 +223,9 @@ async function initDb() {
       [network, info.name, info.address]
     );
   }
-  if (process.env.ADMIN_EMAIL) await q('UPDATE users SET role=\'admin\' WHERE email=$1', [email(process.env.ADMIN_EMAIL)]);
+  if (process.env.ADMIN_EMAIL) {
+    await q("UPDATE users SET role='admin', email_verified_at=COALESCE(email_verified_at, NOW()) WHERE email=$1", [email(process.env.ADMIN_EMAIL)]);
+  }
 }
 
 const dbReady = initDb().catch(err => {
