@@ -646,8 +646,8 @@ app.post('/api/applications', auth, restricted, async (req, res) => {
   if (!price) return res.status(400).json({ error: 'The collateral price is unavailable. Try again shortly.' });
   const collateralUsdCents = Math.round(collateralAmount * price * 100);
   const amountCents = cents(amount);
-  const maxCents = Math.floor(collateralUsdCents * 0.5);
-  if (amountCents > maxCents) return res.status(400).json({ error: `This pledge supports up to ${maxCents / 100} dollars, half the collateral value.` });
+  const requiredCents = Math.ceil(amountCents / 2);
+  if (collateralUsdCents < requiredCents) return res.status(400).json({ error: `A $${amount.toLocaleString('en-US')} request needs at least $${(requiredCents / 100).toLocaleString('en-US')} of collateral.` });
   const deposit = await q('SELECT address FROM deposit_wallets WHERE network=$1 AND active=TRUE', [row.network]);
   if (!deposit.rows[0]) return res.status(400).json({ error: 'No collateral address is set for this network.' });
   const saved = await q(
@@ -1268,8 +1268,8 @@ app.post('/api/admin/applications/:id/:decision', auth, admin, async (req, res) 
     let balance = null;
     if (approve) {
       if (item.collateral_status !== 'Received') { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Collateral has not been received yet.' }); }
-      const maxCents = Math.floor(Number(item.collateral_usd_cents) * 0.5);
-      if (Number(item.amount_cents) > maxCents) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'The request is more than half the collateral value.' }); }
+      const requiredCents = Math.ceil(Number(item.amount_cents) / 2);
+      if (Number(item.collateral_usd_cents) < requiredCents) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'The collateral is less than half the requested amount.' }); }
       const label = item.product === 'credit_card' ? 'Credit line disbursement' : 'Loan disbursement';
       await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [item.amount_cents, item.user_id]);
       await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [item.user_id, label, item.product === 'credit_card' ? 'Credit' : 'Loan', item.amount_cents, 'Completed']);
