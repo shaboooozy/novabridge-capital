@@ -6,83 +6,141 @@
 <title>NovaBridge Capital</title>
 <style>
 :root{
-  --bg:#070807; --panel:#111311; --panel2:#171a17; --text:#f5f7f1;
-  --muted:#9da49a; --line:#2b3029; --accent:#c4f34a; --accent2:#e3f9a0;
-  --danger:#ff9d9d; --warning:#ffd98a; --shadow:0 24px 80px rgba(0,0,0,.38);
+  --bg:#f4f6f8; --panel:#ffffff; --panel2:#ffffff; --text:#1b2430;
+  --muted:#5c6b7a; --line:#d9e0e7; --accent:#0b3a66; --accent2:#0b3a66;
+  --danger:#8d2b2b; --warning:#8a5a12; --shadow:0 10px 30px rgba(16,32,51,.06);
 }
 *{box-sizing:border-box} html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(circle at 82% -5%,#29351c 0,transparent 25%),linear-gradient(180deg,#090a08 0,#070807 52%,#0b0d0a 100%);color:var(--text);font:15px/1.5 "Avenir Next","Segoe UI",sans-serif;letter-spacing:.01em}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "Segoe UI","Helvetica Neue",Arial,sans-serif}
 button,input,select{font:inherit} button{cursor:pointer}
 a{color:inherit;text-decoration:none}
-.container{width:min(1160px,91%);margin:auto}
-.nav{height:78px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:rgba(7,16,14,.86);backdrop-filter:blur(18px)}
-.logo{font-weight:850;letter-spacing:.12em;font-size:15px}.logo span{color:var(--accent)}
-.navlinks{display:flex;gap:28px;color:#b8c9c0;font-size:13px;font-weight:650}.navlinks a{transition:color .2s}.navlinks a:hover{color:var(--accent)}
-.nav-actions{display:flex;gap:10px}.btn{border:1px solid var(--line);background:#102019;color:white;padding:11px 17px;border-radius:12px;font-weight:700}
-.btn:hover{transform:translateY(-1px);border-color:#657449}.btn.primary{background:var(--accent);color:#101408;border-color:var(--accent);box-shadow:0 8px 22px rgba(196,243,74,.14)}
+.container{width:min(1120px,92%);margin:auto}
+.nav{height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;background:#fff}
+.logo{font-weight:700;letter-spacing:.14em;font-size:13px;color:#0b3a66}.logo span{color:#0b3a66}
+.navlinks{display:flex;gap:22px;color:#314256;font-size:14px;font-weight:600}.navlinks a:hover{color:#0b3a66}
+.nav-actions{display:flex;gap:8px}
+.btn{border:1px solid #c5d0db;background:#fff;color:#16324a;padding:10px 14px;border-radius:4px;font-weight:650}
+.btn:hover{border-color:#0b3a66}
+.btn.primary{background:#0b3a66;color:#fff;border-color:#0b3a66}
 .btn.ghost{background:transparent}
-.admin-link{display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.02);color:#a8b9af;font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.68;transition:opacity .2s ease}
-.admin-link:hover{opacity:1;border-color:rgba(196,243,74,.28)}
-.hero{padding:78px 0 66px;display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center}
-.eyebrow{display:inline-flex;gap:8px;align-items:center;color:var(--accent);background:#10251b;border:1px solid #204432;border-radius:999px;padding:7px 11px;font-weight:800;font-size:12px}
-.dot{width:7px;height:7px;background:var(--accent);border-radius:50%;box-shadow:0 0 15px var(--accent)}
-h1{font-size:clamp(44px,5.7vw,74px);line-height:1;letter-spacing:-.055em;margin:19px 0;max-width:690px}
-.hero p{font-size:18px;color:#a9bdb3;max-width:650px}
-.hero-buttons{display:flex;gap:12px;margin-top:28px}
-.hero-note{font-size:12px!important;color:#71877d!important;margin-top:14px}
-.mock{background:linear-gradient(145deg,#1b2116,#0d0f0c);border:1px solid #46542e;border-radius:18px;padding:22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.mock:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(196,243,74,.07),transparent 65%);pointer-events:none}
-.mock-top{display:flex;justify-content:space-between;color:#92a99e;font-size:11px;font-weight:800;letter-spacing:.1em}
-.balance{font-size:39px;font-weight:850;letter-spacing:-.04em;margin:15px 0 4px}
-.up{color:var(--accent);font-weight:800}
-.chart{height:145px;margin:18px 0 10px;position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.admin-link{display:inline-flex;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:4px;color:#0b3a66;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.hero{padding:64px 0 48px;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;color:#0b3a66;background:#e8eef5;border:1px solid #d3deea;border-radius:4px;padding:6px 10px;font-weight:700;font-size:12px;letter-spacing:.06em}
+.dot{width:7px;height:7px;background:#0b3a66;border-radius:50%}
+h1{font-size:clamp(40px,5vw,60px);line-height:1.05;letter-spacing:-.035em;margin:16px 0;max-width:680px;font-weight:650}
+.hero p{font-size:17px;color:#3e4e60;max-width:620px}
+.hero-buttons{display:flex;gap:10px;margin-top:24px}
+.hero-note{font-size:12px!important;color:#6b7c8d!important;margin-top:14px}
+.mock{background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow)}
+.mock-top{display:flex;justify-content:space-between;color:#6b7c8d;font-size:11px;font-weight:700;letter-spacing:.08em}
+.balance{font-size:36px;font-weight:650;letter-spacing:-.03em;margin:14px 0 4px}
+.up{color:#0e6b4f;font-weight:650}
+.chart{height:140px;margin:16px 0 8px;color:#0b3a66;border-bottom:1px solid var(--line)}
 .chart svg{width:100%;height:100%}
-.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.mini{background:#0b1712;border:1px solid var(--line);padding:12px;border-radius:13px}.mini b{display:block;margin-top:4px}
-.section{padding:62px 0}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:25px;border-bottom:1px solid var(--line);padding-bottom:16px}
-.kicker{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.13em;font-weight:850}
-h2{font-size:36px;letter-spacing:-.045em;margin:7px 0}
+.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mini{background:#f7f9fb;border:1px solid var(--line);padding:12px;border-radius:6px}.mini b{display:block;margin-top:4px}
+.section{padding:56px 0}
+.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:22px;border-bottom:1px solid var(--line);padding-bottom:14px}
+.kicker{color:#0b3a66;font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+h2{font-size:32px;letter-spacing:-.03em;margin:6px 0;font-weight:650}
 .muted{color:var(--muted)}
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
-.card{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:21px}
-.card:hover{border-color:#345846;transform:translateY(-2px);transition:.2s}
-.icon{width:42px;height:42px;display:grid;place-items:center;background:#183024;border-radius:12px;font-size:20px}
-.card h3{margin:18px 0 6px;font-size:20px}.tag{display:inline-block;padding:4px 8px;border-radius:999px;background:#15291f;color:#9bd6b1;font-size:11px;font-weight:800}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px}
+.card:hover{border-color:#9eb0c2}
+.icon{width:36px;height:36px;display:grid;place-items:center;background:#e8eef5;border-radius:6px;font-size:18px;color:#0b3a66}
+.card h3{margin:16px 0 6px;font-size:18px}
+.tag{display:inline-block;padding:3px 8px;border-radius:4px;background:#e8eef5;color:#0b3a66;font-size:11px;font-weight:700;letter-spacing:.04em}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.stat{padding:23px;border:1px solid var(--line);border-radius:12px;background:#0b1612}.stat strong{font-size:28px;display:block;letter-spacing:-.03em}.stat span{color:var(--muted);font-size:13px}
-.calculator{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.calc,.portfolio{border:1px solid var(--line);border-radius:20px;background:#0c1713;padding:24px}
-label{display:block;color:#a6bbb0;font-size:13px;font-weight:700;margin:16px 0 7px}
-input,select{width:100%;padding:13px;border-radius:11px;border:1px solid var(--line);background:#07100d;color:white;outline:none}
-input:focus,select:focus{border-color:#4c8c68}
-.range{accent-color:var(--accent);padding:0}
-.result{margin-top:22px;padding:20px;border-radius:15px;background:#12241a;border:1px solid #254633}
-.result .big{font-size:37px;font-weight:850;letter-spacing:-.05em}
-.alloc{display:grid;grid-template-columns:150px 1fr;gap:25px;align-items:center}
-.donut{width:145px;height:145px;border-radius:50%;background:conic-gradient(var(--accent) 0 45%,#75a6ff 45% 70%,#d9ae66 70% 90%,#50635a 90%);display:grid;place-items:center}
-.donut:after{content:"Portfolio";width:90px;height:90px;border-radius:50%;background:#0c1713;display:grid;place-items:center;color:#a8bbb1;font-size:12px}
-.alloc-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
-.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:14px 9px;border-bottom:1px solid var(--line)}.table th{color:#789084;font-size:12px;text-transform:uppercase}
-.badge{font-size:11px;border-radius:999px;padding:5px 8px;background:#163022;color:#9be4b6}.risk{background:#2b2414;color:var(--warning)}
-.cta{padding:45px;border:1px solid #274737;border-radius:24px;background:radial-gradient(circle at 80% 10%,#173d29,transparent 40%),#0d1c15;display:flex;justify-content:space-between;align-items:center;gap:30px}
-footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:12px}
-.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
-.modal-back.show{display:flex}.modal{width:min(520px,100%);background:#0d1914;border:1px solid #315340;border-radius:20px;padding:25px;box-shadow:var(--shadow)}
-.modal-head{display:flex;justify-content:space-between}.close{background:none;border:0;color:#a7b9b0;font-size:25px}
-.notice{padding:12px;background:#211d10;color:#dccb9a;border:1px solid #4a4023;border-radius:11px;font-size:12px;margin-top:15px}
-.account-bar{display:none;align-items:center;justify-content:space-between;gap:18px;padding:15px 18px;border:1px solid #46542e;border-radius:14px;background:#151b10;margin:10px auto 0}
-.account-bar.show{display:flex}.account-bar strong{color:var(--accent2)}.account-bar .muted{font-size:13px}
-.wallet{padding:16px;border:1px solid #46542e;background:#11150d;border-radius:12px;word-break:break-all;font-family:monospace;color:var(--accent2)}
-.dashboard-view{display:none;padding:38px 0 10px}.logged-in .dashboard-view{display:block}.logged-in .marketing-section{display:none}.dashboard-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:24px}.dashboard-head h1{font-size:clamp(36px,5vw,58px);margin:8px 0 0}.dashboard-actions{display:flex;gap:10px;flex-wrap:wrap}.wallet-input{font-family:ui-monospace,Consolas,monospace;letter-spacing:0;word-break:break-all}.dashboard-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:15px}.dashboard-card{background:linear-gradient(145deg,#13271d,#0c1813);border:1px solid #2a4b38;border-radius:14px;padding:23px}.dashboard-card h3{margin:0 0 10px;font-size:14px;color:#b6c9be}.dashboard-value{font-size:42px;letter-spacing:-.05em;font-weight:850}.dashboard-meta{display:flex;justify-content:space-between;gap:15px;margin-top:24px;padding-top:15px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}.dashboard-meta strong{display:block;color:var(--text);font-size:16px;margin-top:3px}.dashboard-list{display:grid;gap:13px;margin-top:16px}.dashboard-list div{display:flex;justify-content:space-between;color:var(--muted)}.dashboard-list b{color:var(--text)}
+.stat{padding:20px;border:1px solid var(--line);border-radius:8px;background:#fff}.stat strong{font-size:22px;display:block}.stat span{color:var(--muted);font-size:13px}
+.calculator{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.calc,.portfolio{border:1px solid var(--line);border-radius:8px;background:#fff;padding:22px}
+label{display:block;color:#314256;font-size:13px;font-weight:650;margin:14px 0 6px}
+input,select{width:100%;padding:12px;border-radius:4px;border:1px solid #c5d0db;background:#fff;color:#1b2430;outline:none}
+input:focus,select:focus{border-color:#0b3a66}
+.range{accent-color:#0b3a66;padding:0}
+.result{margin-top:18px;padding:16px;border-radius:6px;background:#f7f9fb;border:1px solid var(--line)}
+.result .big{font-size:32px;font-weight:650;letter-spacing:-.03em}
+.alloc{display:grid;grid-template-columns:140px 1fr;gap:20px;align-items:center}
+.donut{width:132px;height:132px;border-radius:50%;background:conic-gradient(#0b3a66 0 45%,#3d7ab5 45% 70%,#8aa4bd 70% 90%,#d5dee6 90%);display:grid;place-items:center}
+.donut:after{content:"Mix";width:78px;height:78px;border-radius:50%;background:#fff;display:grid;place-items:center;color:#5c6b7a;font-size:12px}
+.alloc-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.table{width:100%;border-collapse:collapse;background:#fff}
+.table th,.table td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line)}
+.table th{color:#5c6b7a;font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.badge{font-size:11px;border-radius:4px;padding:4px 7px;background:#e7f3ec;color:#0e6b4f}
+.risk{background:#f8f1e4;color:#8a5a12}
+.cta{padding:32px;border:1px solid var(--line);border-radius:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:24px}
+footer{border-top:1px solid var(--line);padding:32px 0;color:#6b7c8d;font-size:12px;background:#fff}
+.modal-back{position:fixed;inset:0;background:rgba(16,32,51,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal-back.show{display:flex}
+.modal{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow);color:#1b2430}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.close{background:none;border:0;color:#5c6b7a;font-size:24px}
+.notice{padding:12px;background:#f7f9fb;color:#314256;border:1px solid var(--line);border-radius:6px;font-size:13px;margin-top:14px}
+.account-bar{display:none;align-items:center;justify-content:space-between;gap:16px;padding:14px 0 0}
+.account-bar.show{display:flex}
+.account-bar strong{color:#0b3a66}
+.wallet{padding:14px;border:1px solid #c5d0db;background:#f7f9fb;border-radius:6px;word-break:break-all;font-family:ui-monospace,Consolas,monospace;color:#0b3a66;font-size:13px}
+.dashboard-view{display:none;padding:28px 0 8px}
+.logged-in .dashboard-view{display:block}
+.logged-in .marketing-section,.logged-in .marketing-link{display:none}
+body:not(.logged-in) .client-link{display:none}
+.dashboard-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:18px}
+.dashboard-head h1{font-size:clamp(32px,4vw,44px);margin:6px 0 0;font-weight:650}
+.dashboard-actions{display:flex;gap:8px;flex-wrap:wrap}
+.wallet-input{font-family:ui-monospace,Consolas,monospace;letter-spacing:0;word-break:break-all}
+.dashboard-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:14px}
+.dashboard-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px}
+.dashboard-card h3{margin:0 0 8px;font-size:13px;color:#5c6b7a;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.dashboard-value{font-size:40px;letter-spacing:-.04em;font-weight:650}
+.dashboard-meta{display:flex;justify-content:space-between;gap:12px;margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.dashboard-meta strong{display:block;color:var(--text);font-size:15px;margin-top:3px}
+.dashboard-list{display:grid;gap:10px;margin-top:12px}
+.dashboard-list div{display:flex;justify-content:space-between;color:var(--muted)}
+.dashboard-list b{color:var(--text)}
+.wallet-panel{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px}
+.wallet-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.wallet-row:last-child{border-bottom:0}
+.wallet-row b{display:block}
+.wallet-row span{color:#5c6b7a;font-size:13px;word-break:break-all}
 .mobile-menu{display:none}
-.mobile-menu[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+.mobile-menu[aria-expanded="true"]{border-color:#0b3a66;color:#0b3a66}
 .navlinks.open{display:flex}
+.toast{position:fixed;right:16px;bottom:16px;z-index:50;background:#0b3a66;color:#fff;padding:12px 14px;border-radius:4px;font-weight:650}
 @media(max-width:850px){
- .navlinks{display:none}.navlinks.open{position:absolute;top:78px;left:0;right:0;display:grid;gap:0;padding:8px 4.5% 14px;background:#0a100d;border-bottom:1px solid var(--line)}.navlinks.open a{padding:12px 0}.mobile-menu{display:block}.hide-sm{display:none!important}.hero{grid-template-columns:1fr;padding-top:55px}.mock{transform:none}
- .cards,.stats{grid-template-columns:1fr 1fr}.calculator{grid-template-columns:1fr}.alloc{grid-template-columns:1fr}
- .cta{display:block}.cta .btn{margin-top:15px}.dashboard-grid{grid-template-columns:1fr}.dashboard-head{align-items:flex-start;flex-direction:column}.dashboard-meta{flex-wrap:wrap}
+ .navlinks{display:none}
+ .navlinks.open{position:absolute;top:64px;left:0;right:0;display:grid;gap:0;padding:8px 4% 14px;background:#fff;border-bottom:1px solid var(--line)}
+ .navlinks.open a{padding:12px 0}
+ .mobile-menu{display:block}
+ .hide-sm{display:none!important}
+ .hero{grid-template-columns:1fr;padding-top:36px}
+ .cards,.stats{grid-template-columns:1fr 1fr}
+ .calculator,.alloc,.dashboard-grid{grid-template-columns:1fr}
+ .cta{display:block}
+ .cta .btn{margin-top:14px}
+ .dashboard-head{align-items:flex-start;flex-direction:column}
+ .dashboard-meta{flex-wrap:wrap}
 }
-@media(max-width:540px){.container{width:min(100% - 32px,1160px)}.nav{height:66px}.navlinks.open{top:66px;padding-left:16px;padding-right:16px}.nav-actions{gap:6px}.nav-actions .btn{padding:9px 10px;font-size:13px}.nav-actions .ghost{display:inline-flex}.mobile-menu{padding:9px 11px}.cards,.stats{grid-template-columns:1fr}h1{font-size:42px;line-height:1.05}.hero{padding:42px 0}.hero-buttons{flex-direction:column}.hero-buttons .btn{width:100%}.mock{padding:16px}.mock-top{font-size:9px}.mini-grid{grid-template-columns:1fr}.section{padding:42px 0}.section-head{align-items:flex-start;flex-direction:column;gap:8px}h2{font-size:29px}.dashboard-head h1{font-size:36px}.dashboard-meta{display:grid;grid-template-columns:1fr 1fr}.dashboard-value{font-size:36px}.account-bar{align-items:flex-start;flex-direction:column}.modal-back{padding:12px;align-items:flex-end}.modal{max-height:90dvh;overflow:auto;padding:20px;border-radius:16px}.table{min-width:620px}.cta{padding:24px}}
+@media(max-width:540px){
+ .container{width:min(100% - 28px,1120px)}
+ .nav{height:58px}
+ .navlinks.open{top:58px}
+ .nav-actions{gap:6px}
+ .nav-actions .btn{padding:8px 10px;font-size:13px}
+ .cards,.stats,.mini-grid{grid-template-columns:1fr}
+ h1{font-size:36px}
+ .hero{padding:28px 0}
+ .hero-buttons{flex-direction:column}
+ .hero-buttons .btn{width:100%}
+ .section{padding:36px 0}
+ h2{font-size:26px}
+ .dashboard-value{font-size:34px}
+ .dashboard-meta{display:grid;grid-template-columns:1fr 1fr}
+ .account-bar{align-items:flex-start;flex-direction:column}
+ .modal{max-height:90dvh;overflow:auto}
+ .table{min-width:560px}
+ .wallet-row{align-items:flex-start;flex-direction:column}
+}
 </style>
 </head>
 <body>
@@ -90,7 +148,11 @@ footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:1
 <header class="container nav">
   <a class="logo" href="#">NOVA<span>BRIDGE</span></a>
   <nav class="navlinks">
-    <a href="#opportunities">Products</a><a href="#calculator">Markets</a><a href="#portfolio">Portfolio</a><a href="#activity">Activity</a>
+    <a class="client-link" href="#dashboardView">Account</a>
+    <a class="client-link" href="#linkedWallets">Wallets</a>
+    <a href="#activity">Activity</a>
+    <a class="marketing-link" href="#opportunities">Strategies</a>
+    <a class="marketing-link" href="#calculator">Research</a>
   </nav>
   <div class="nav-actions" id="authActions"><button class="btn ghost" onclick="openModal('login')">Log in</button><button class="btn primary" onclick="openModal('signup')">Get started</button></div>
   <button class="btn mobile-menu" aria-label="Toggle navigation" aria-expanded="false" onclick="toggleMobileNav()">Menu</button>
@@ -100,8 +162,8 @@ footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:1
 <section class="container hero marketing-section">
  <div>
   <span class="eyebrow"><span class="dot"></span> THE DIGITAL ASSET PLATFORM</span>
-  <h1>Professional infrastructure for digital-asset wealth.</h1>
-  <p>NovaBridge brings curated strategies, account-level visibility, and disciplined funding workflows into one experience for eligible participants.</p>
+  <h1>A private account for digital assets.</h1>
+  <p>Review the account, link a wallet you control, and move funds with written instructions. Cash posts only after a transfer is confirmed.</p>
   <div class="hero-buttons"><button class="btn primary" onclick="scrollToId('opportunities')">Review strategies →</button><button class="btn" onclick="openModal('learn')">How access works</button></div>
   <p class="hero-note">Clear terms. Verified settlement. Account records you can review. Availability and risk vary by product and jurisdiction.</p>
  </div>
@@ -127,11 +189,15 @@ footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:1
 
 <section class="container dashboard-view" id="dashboardView">
  <div id="restrictionNotice" class="notice" style="display:none;margin-bottom:18px"></div>
- <div class="dashboard-head"><div><div class="kicker">Professional account</div><h1 id="dashboardGreeting">Portfolio overview</h1><p class="muted">Review available cash, product access, funding requests, and account activity.</p></div><div class="dashboard-actions"><button class="btn" onclick="openFunding()">＋ Add funds</button><button class="btn" onclick="openWithdraw()">Withdraw</button><button class="btn primary" onclick="scrollToId('activity')">View activity</button></div></div>
+ <div class="dashboard-head"><div><div class="kicker">Professional account</div><h1 id="dashboardGreeting">Portfolio overview</h1><p class="muted">Review available cash, product access, funding requests, and account activity.</p></div><div class="dashboard-actions"><button class="btn" onclick="openFunding()">Transfer in</button><button class="btn" onclick="openWithdraw()">Transfer out</button><button class="btn primary" onclick="scrollToId('activity')">Activity</button></div></div>
  <div class="dashboard-grid">
   <article class="dashboard-card"><h3>Available cash</h3><div class="dashboard-value" id="dashboardBalance">$0.00</div><div class="dashboard-meta"><span>Account currency<strong>USD</strong></span><span>Account status<strong id="dashboardStatus">Active</strong></span><span>Pending withdrawals<strong id="dashboardPending">$0.00</strong></span></div></article>
-  <article class="dashboard-card"><h3>Portfolio framework</h3><div class="dashboard-list"><div><span>Digital assets</span><b>45%</b></div><div><span>Infrastructure</span><b>25%</b></div><div><span>Private credit</span><b>20%</b></div><div><span>Cash reserve</span><b>10%</b></div></div><p class="muted">Model mix for this account. Positions you fund are listed in activity.</p></article>
+  <article class="dashboard-card"><h3>Account mix</h3><div class="dashboard-list"><div><span>Digital assets</span><b>45%</b></div><div><span>Infrastructure</span><b>25%</b></div><div><span>Private credit</span><b>20%</b></div><div><span>Cash reserve</span><b>10%</b></div></div><p class="muted">A model mix. Funded activity is listed below.</p></article>
  </div>
+ <section class="wallet-panel" id="linkedWallets">
+  <div class="dashboard-head"><div><div class="kicker">External accounts</div><h2>Linked wallets</h2><p class="muted">Link a wallet the way a brokerage links an outside account. Linking does not move money or change your cash balance.</p></div><button class="btn primary" type="button" onclick="openLinkWallet()">Link a wallet</button></div>
+  <div id="linkedWalletList"><p class="muted">No wallet linked yet.</p></div>
+ </section>
 </section>
 
 <section class="container section marketing-section" id="opportunities">
@@ -170,7 +236,7 @@ footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:1
 </section>
 
 <section class="container section" id="activity">
- <div class="section-head"><div><div class="kicker">Dashboard</div><h2>Recent activity</h2></div><div class="dashboard-actions"><button class="btn" onclick="openFunding()">＋ Add funds</button><button class="btn primary" onclick="openWithdraw()">Withdraw</button></div></div>
+ <div class="section-head"><div><div class="kicker">Dashboard</div><h2>Recent activity</h2></div><div class="dashboard-actions"><button class="btn" onclick="openFunding()">Transfer in</button><button class="btn primary" onclick="openWithdraw()">Transfer out</button></div></div>
  <div class="card" style="overflow:auto">
  <table class="table"><thead><tr><th>Activity</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>
 
@@ -200,7 +266,7 @@ footer{border-top:1px solid var(--line);padding:35px 0;color:#71877d;font-size:1
 const $=id=>document.getElementById(id);
 const money=n=>'$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let currentUser=null, fundingAfterLogin=false, withdrawAfterLogin=false, availableCash=0, emailVerified=false, depositNetworks=[], pendingFunding={amount:0,network:'bitcoin'};
+let currentUser=null, fundingAfterLogin=false, withdrawAfterLogin=false, availableCash=0, emailVerified=false, depositNetworks=[], pendingFunding={amount:0,network:'bitcoin'}, linkedWallets=[];
 function toggleMobileNav(){const nav=document.querySelector('.navlinks'),button=document.querySelector('.mobile-menu'),open=!nav.classList.contains('open');nav.classList.toggle('open',open);button.setAttribute('aria-expanded',String(open))}
 const WALLET_HINTS={bitcoin:'bc1… or 1… or 3…',ethereum:'0x followed by 40 hex characters',solana:'Solana wallet address',xrp:'XRP address (starts with r)',stellar:'Stellar address (starts with G)',zcash:'Zcash transparent address (t1… or t3…)'};
 const NETWORK_LABELS={bitcoin:'Bitcoin',ethereum:'Ethereum',solana:'Solana',xrp:'XRP',stellar:'Stellar',zcash:'Zcash'};
@@ -217,7 +283,7 @@ learn:['HOW ACCESS WORKS','A considered process',`<div class="card"><b>01 — Re
 resetRequest:['ACCOUNT SECURITY','Reset your password',`<p class="muted">Enter your account email. If it exists, we will send reset instructions.</p><label>Email</label><input id="resetEmail" type="email" placeholder="you@example.com"><button class="btn primary" style="width:100%;margin-top:18px" onclick="requestPasswordReset()">Send reset link</button><div id="modalMsg"></div>`],
 deposit:['FUNDING','Fund your account','']};
 const x=d[type]||d.learn;$('modalKicker').textContent=x[0];$('modalTitle').textContent=x[1];$('modalBody').innerHTML=x[2];$('modalBack').classList.add('show')}
-function updateAuthUi(){const actions=$('authActions');document.body.classList.toggle('logged-in',Boolean(currentUser));if(currentUser){$('accountName').textContent=currentUser.name;if($('accountEmail'))$('accountEmail').textContent=' · '+currentUser.email;$('dashboardGreeting').textContent='Welcome, '+currentUser.name;$('accountBar').classList.add('show');const adminLink=currentUser.role==='admin'?'<a class="admin-link" href="/admin.html">Admin</a>':'';actions.innerHTML='<button class="btn ghost hide-sm" onclick="scrollToId(\'activity\')">Dashboard</button><button class="btn hide-sm" onclick="openWithdraw()">Withdraw</button><button class="btn primary" onclick="openFunding()">Add funds</button>'+adminLink}else{$('accountBar').classList.remove('show');actions.innerHTML='<button class="btn ghost" onclick="openModal(\'login\')">Log in</button><button class="btn primary" onclick="openModal(\'signup\')">Get started</button>'}}
+function updateAuthUi(){const actions=$('authActions');document.body.classList.toggle('logged-in',Boolean(currentUser));if(currentUser){$('accountName').textContent=currentUser.name;if($('accountEmail'))$('accountEmail').textContent=' · '+currentUser.email;$('dashboardGreeting').textContent='Welcome, '+currentUser.name;$('accountBar').classList.add('show');const adminLink=currentUser.role==='admin'?'<a class="admin-link" href="/admin.html">Admin</a>':'';actions.innerHTML='<button class="btn ghost hide-sm" onclick="scrollToId(\'activity\')">Account</button><button class="btn hide-sm" onclick="openLinkWallet()">Wallets</button><button class="btn primary" onclick="openFunding()">Transfer in</button>'+adminLink}else{$('accountBar').classList.remove('show');actions.innerHTML='<button class="btn ghost" onclick="openModal(\'login\')">Log in</button><button class="btn primary" onclick="openModal(\'signup\')">Open an account</button>'}}
 async function loadDepositNetworks(){
   const d=await api('/api/deposit-addresses');
   depositNetworks=d.networks||[];
@@ -232,9 +298,9 @@ async function openFunding(){
   try{
     const networks=await loadDepositNetworks();
     const options=networks.map(n=>`<option value="${esc(n.id)}">${esc(n.name)}</option>`).join('');
-    $('modalKicker').textContent='FUNDING';
-    $('modalTitle').textContent='Fund your account';
-    $('modalBody').innerHTML=`<p class="muted">Choose the amount and the network you will send from. The matching receive address appears next.</p><label>Amount (USD)</label><input id="fundingAmount" type="number" value="5000" min="100"><label>Network</label><select id="fundingNetwork">${options}</select><button class="btn primary" style="width:100%;margin-top:18px" onclick="showWalletStep()">Continue</button><div id="modalMsg"></div>`;
+    $('modalKicker').textContent='TRANSFERS';
+    $('modalTitle').textContent='Transfer in';
+    $('modalBody').innerHTML=`<p class="muted">Choose the amount and network. You will get the receiving address for this account. Linking your own wallet is separate and does not send the funds.</p><label>Amount (USD)</label><input id="fundingAmount" type="number" value="5000" min="100"><label>Network</label><select id="fundingNetwork">${options}</select><button class="btn primary" style="width:100%;margin-top:18px" onclick="showWalletStep()">Continue</button><div id="modalMsg"></div>`;
     $('modalBack').classList.add('show');
   }catch(e){
     $('modalKicker').textContent='FUNDING';
@@ -243,14 +309,23 @@ async function openFunding(){
     $('modalBack').classList.add('show');
   }
 }
-function updateWithdrawHint(){const input=$('withdrawWallet');if(input)input.placeholder=WALLET_HINTS[$('withdrawNetwork').value]||'Wallet address'}
+function updateWithdrawHint(){const input=$('withdrawWallet');if(input)input.placeholder=WALLET_HINTS[$('withdrawNetwork').value]||'Wallet address';const slot=$('linkedPickSlot');if(slot)slot.innerHTML=linkedPickHtml($('withdrawNetwork').value)}
+function shortAddr(a){return a&&a.length>18?a.slice(0,8)+'…'+a.slice(-6):a}
+function linkedPickHtml(network){const rows=linkedWallets.filter(w=>w.network===network);if(!rows.length)return '';return `<label>Linked wallet</label><select id="linkedPick" onchange="applyLinkedWallet()"><option value="">Enter a different address</option>${rows.map(w=>`<option value="${esc(w.address)}">${esc(w.label||NETWORK_LABELS[w.network]||w.network)} · ${esc(shortAddr(w.address))}</option>`).join('')}</select>`}
+function applyLinkedWallet(){const pick=$('linkedPick');if(pick&&$('withdrawWallet'))$('withdrawWallet').value=pick.value}
+function renderLinkedWallets(){const box=$('linkedWalletList');if(!box)return;if(!linkedWallets.length){box.innerHTML='<p class="muted">No wallet linked yet.</p>';return}box.innerHTML=linkedWallets.map(w=>`<div class="wallet-row"><div><b>${esc(w.label||NETWORK_LABELS[w.network]||w.network)}</b><span>${esc(NETWORK_LABELS[w.network]||w.network)} · ${esc(w.address)}</span></div><button class="btn" type="button" onclick="removeLinkedWallet(${Number(w.id)})">Remove</button></div>`).join('')}
+async function loadLinkedWallets(){try{const d=await api('/api/linked-wallets');linkedWallets=d.wallets||[]}catch(_){linkedWallets=[]}renderLinkedWallets()}
+function openLinkWallet(){if(!currentUser){openModal('login');return}const options=WITHDRAW_NETWORKS.map(id=>`<option value="${id}">${NETWORK_LABELS[id]}</option>`).join('');$('modalKicker').textContent='WALLETS';$('modalTitle').textContent='Link a wallet';$('modalBody').innerHTML=`<p class="muted">Connect a browser wallet, or enter an address you control. Saving it does not move funds.</p><label>Network</label><select id="linkNetwork">${options}</select><label>Name on the account</label><input id="linkLabel" placeholder="Personal wallet"><label>Address</label><input id="linkAddress" class="wallet-input" spellcheck="false" autocomplete="off" placeholder="Wallet address"><div class="dashboard-actions" style="margin-top:16px"><button class="btn" type="button" onclick="connectBrowserWallet()">Connect browser wallet</button><button class="btn primary" type="button" onclick="saveLinkedWallet()">Save address</button></div><div id="modalMsg"></div>`;$('modalBack').classList.add('show')}
+async function connectBrowserWallet(){const network=$('linkNetwork').value;try{let address='';if(network==='ethereum'){if(!window.ethereum){$('modalMsg').innerHTML='<div class="notice">No Ethereum wallet was found in this browser. Paste the address instead.</div>';return}const accounts=await window.ethereum.request({method:'eth_requestAccounts'});address=accounts&&accounts[0]}else if(network==='solana'){const provider=window.solana||(window.phantom&&window.phantom.solana);if(!provider){$('modalMsg').innerHTML='<div class="notice">No Solana wallet was found in this browser. Paste the address instead.</div>';return}const resp=await provider.connect();address=resp.publicKey&&resp.publicKey.toString()}else{$('modalMsg').innerHTML='<div class="notice">Bitcoin, XRP, Stellar, and Zcash are linked by pasting the address. Browser connect is available for Ethereum and Solana.</div>';return}if(!address){$('modalMsg').innerHTML='<div class="notice">The wallet did not share an address.</div>';return}$('linkAddress').value=address;await api('/api/linked-wallets',{method:'POST',body:JSON.stringify({network,address,label:$('linkLabel').value,source:'browser'})});closeModal();await loadLinkedWallets();toast('Wallet linked.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e&&e.message?e.message:'The wallet connection was cancelled.')+'</div>'}}
+async function saveLinkedWallet(){try{await api('/api/linked-wallets',{method:'POST',body:JSON.stringify({network:$('linkNetwork').value,address:$('linkAddress').value.trim(),label:$('linkLabel').value,source:'manual'})});closeModal();await loadLinkedWallets();toast('Wallet linked.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function removeLinkedWallet(id){try{await api('/api/linked-wallets/'+id,{method:'DELETE'});await loadLinkedWallets();toast('Wallet removed.')}catch(e){toast(e.message)}}
 async function openWithdraw(){
   if(!currentUser){withdrawAfterLogin=true;openModal('login');return}
-  try{await loadDepositNetworks()}catch(_){}
+  try{await loadDepositNetworks();await loadLinkedWallets()}catch(_){}
   const first=depositNetworks[0]?.id||'bitcoin';
-  $('modalKicker').textContent='WITHDRAWAL';
-  $('modalTitle').textContent='Request a withdrawal';
-  $('modalBody').innerHTML=`<p class="muted">Enter the destination wallet and amount. Available cash: <b>${money(availableCash)}</b>.</p><label>Network</label><select id="withdrawNetwork" onchange="updateWithdrawHint()">${networkOptions(first)}</select><label>Wallet address</label><input id="withdrawWallet" class="wallet-input" spellcheck="false" autocomplete="off" placeholder="${WALLET_HINTS[first]||'Wallet address'}"><label>Amount (USD)</label><input id="withdrawAmount" type="number" min="0.01" step="0.01" value="${availableCash>0?availableCash:''}"><div class="notice">Requests stay pending until they are reviewed. Only use an address you control on the selected network.</div><button class="btn primary" style="width:100%;margin-top:18px" onclick="submitWithdraw()">Submit withdrawal</button><div id="modalMsg"></div>`;
+  $('modalKicker').textContent='TRANSFERS';
+  $('modalTitle').textContent='Transfer out';
+  $('modalBody').innerHTML=`<p class="muted">Send available cash to a wallet linked on this account, or enter another address you control. Available cash: <b>${money(availableCash)}</b>.</p><label>Network</label><select id="withdrawNetwork" onchange="updateWithdrawHint()">${networkOptions(first)}</select><div id="linkedPickSlot">${linkedPickHtml(first)}</div><label>Wallet address</label><input id="withdrawWallet" class="wallet-input" spellcheck="false" autocomplete="off" placeholder="${WALLET_HINTS[first]||'Wallet address'}"><label>Amount (USD)</label><input id="withdrawAmount" type="number" min="0.01" step="0.01" value="${availableCash>0?availableCash:''}"><div class="notice">The request stays pending until it is reviewed. Nothing is sent until then.</div><button class="btn primary" style="width:100%;margin-top:18px" onclick="submitWithdraw()">Submit transfer</button><div id="modalMsg"></div>`;
   $('modalBack').classList.add('show');
 }
 async function submitWithdraw(){
@@ -275,9 +350,9 @@ async function showWalletStep(){
     const selected=networks.find(n=>n.id===network);
     if(!selected){$('modalMsg').innerHTML='<div class="notice">Select a supported network.</div>';return}
     pendingFunding={amount,network};
-    $('modalKicker').textContent='FUNDING';
-    $('modalTitle').textContent='Send on '+selected.name;
-    $('modalBody').innerHTML=`<p class="muted">Send the equivalent of <b>${money(amount)}</b> on <b>${esc(selected.name)}</b> to this address.</p><div class="wallet" id="depositAddress">${esc(selected.address)}</div><button class="btn" style="width:100%;margin-top:12px" type="button" onclick="copyDepositAddress()">Copy address</button><div class="notice">Only send ${esc(selected.name)} to this address. No memo or destination tag is required. Available cash updates after the transfer is confirmed.</div><button class="btn primary" style="width:100%;margin-top:18px" onclick="requestFunding()">I sent the funds</button><div id="modalMsg"></div>`;
+    $('modalKicker').textContent='TRANSFERS';
+    $('modalTitle').textContent='Incoming '+selected.name+' transfer';
+    $('modalBody').innerHTML=`<p class="muted">Send <b>${money(amount)}</b> on <b>${esc(selected.name)}</b> to this receiving address. Use a wallet you control.</p><div class="wallet" id="depositAddress">${esc(selected.address)}</div><button class="btn" style="width:100%;margin-top:12px" type="button" onclick="copyDepositAddress()">Copy address</button><div class="notice">Only send ${esc(selected.name)} to this address. No memo or destination tag is required. Cash is posted after the transfer is confirmed.</div><button class="btn primary" style="width:100%;margin-top:18px" onclick="requestFunding()">I have sent the transfer</button><div id="modalMsg"></div>`;
   }catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}
 }
 async function copyDepositAddress(){
@@ -287,14 +362,14 @@ async function copyDepositAddress(){
 }
 async function register(){try{let d=await api('/api/register',{method:'POST',body:JSON.stringify({name:$('signupName').value,email:$('signupEmail').value,password:$('signupPassword').value})});currentUser=d.user;emailVerified=Boolean(d.user.emailVerified);updateAuthUi();closeModal();await loadDashboard();toast('Welcome, '+d.user.name+'.');if(fundingAfterLogin){fundingAfterLogin=false;openFunding()}else if(withdrawAfterLogin){withdrawAfterLogin=false;openWithdraw()}}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
 async function login(){try{let d=await api('/api/login',{method:'POST',body:JSON.stringify({email:$('loginEmail').value,password:$('loginPassword').value})});currentUser=d.user;emailVerified=Boolean(d.user.emailVerified);updateAuthUi();closeModal();await loadDashboard();toast('Welcome back, '+d.user.name+'.');if(fundingAfterLogin){fundingAfterLogin=false;openFunding()}else if(withdrawAfterLogin){withdrawAfterLogin=false;openWithdraw()}}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
-async function loadDashboard(){const d=await api('/api/dashboard');availableCash=Number(d.portfolio.available ?? d.portfolio.cash ?? 0);emailVerified=d.emailVerified!==false;const balance=money(availableCash);$('heroBalance').textContent=balance;$('dashboardBalance').textContent=balance;if($('dashboardPending'))$('dashboardPending').textContent=money(d.portfolio.pendingWithdrawal);if($('dashboardStatus'))$('dashboardStatus').textContent=d.accountStatus==='suspended'?'Suspended':d.flagged?'Restricted':'Active';const notice=$('restrictionNotice');if(notice){if(d.accountStatus==='suspended'||d.flagged){notice.style.display='block';notice.textContent=d.accountStatus==='suspended'?'This account is suspended. Funding and withdrawals are unavailable.':(d.flagReason||'This account is restricted. Funding and withdrawals are unavailable.');}else notice.style.display='none'}document.querySelector('#activity tbody').innerHTML=d.activities.length?d.activities.map(a=>`<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join(''):`<tr><td colspan="4" class="muted">No transactions yet.</td></tr>`}
+async function loadDashboard(){const d=await api('/api/dashboard');availableCash=Number(d.portfolio.available ?? d.portfolio.cash ?? 0);emailVerified=d.emailVerified!==false;const balance=money(availableCash);$('heroBalance').textContent=balance;$('dashboardBalance').textContent=balance;if($('dashboardPending'))$('dashboardPending').textContent=money(d.portfolio.pendingWithdrawal);if($('dashboardStatus'))$('dashboardStatus').textContent=d.accountStatus==='suspended'?'Suspended':d.flagged?'Restricted':'Active';const notice=$('restrictionNotice');if(notice){if(d.accountStatus==='suspended'||d.flagged){notice.style.display='block';notice.textContent=d.accountStatus==='suspended'?'This account is suspended. Funding and withdrawals are unavailable.':(d.flagReason||'This account is restricted. Funding and withdrawals are unavailable.');}else notice.style.display='none'}document.querySelector('#activity tbody').innerHTML=d.activities.length?d.activities.map(a=>`<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join(''):`<tr><td colspan="4" class="muted">No transactions yet.</td></tr>`;await loadLinkedWallets()}
 async function loadSession(){try{const d=await api('/api/me');if(!d.authenticated){currentUser=null;updateAuthUi();return}currentUser=d.user;emailVerified=Boolean(d.user.emailVerified);updateAuthUi();await loadDashboard()}catch(_){currentUser=null;updateAuthUi()}}
-async function logout(){await api('/api/logout',{method:'POST'});currentUser=null;availableCash=0;emailVerified=false;$('heroBalance').textContent='$0.00';$('dashboardBalance').textContent='$0.00';if($('dashboardPending'))$('dashboardPending').textContent='$0.00';document.querySelector('#activity tbody').innerHTML='';updateAuthUi();toast('You have been logged out.')}
+async function logout(){await api('/api/logout',{method:'POST'});currentUser=null;availableCash=0;emailVerified=false;linkedWallets=[];renderLinkedWallets();$('heroBalance').textContent='$0.00';$('dashboardBalance').textContent='$0.00';if($('dashboardPending'))$('dashboardPending').textContent='$0.00';document.querySelector('#activity tbody').innerHTML='';updateAuthUi();toast('You have been logged out.')}
 async function requestFunding(){try{await api('/api/funding-request',{method:'POST',body:JSON.stringify({amount:pendingFunding.amount,network:pendingFunding.network})});closeModal();await loadDashboard();toast('Funding request submitted.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
 async function requestPasswordReset(){try{const d=await api('/api/password-reset/request',{method:'POST',body:JSON.stringify({email:$('resetEmail').value})});$('modalMsg').innerHTML='<div class="notice">'+esc(d.message)+'</div>'}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
 function openInvest(name){$('modalKicker').textContent='OPPORTUNITY';$('modalTitle').textContent=name;$('modalBody').innerHTML=`<p class="muted">Review the opportunity before submitting an allocation request.</p><label>Allocation amount</label><input id="investAmt" type="number" value="2500" min="100"><div class="notice">Allocations are subject to availability, eligibility, risk review and applicable terms.</div><button class="btn primary" style="width:100%;margin-top:18px" onclick="allocate('${esc(name)}')">Submit allocation</button><div id="modalMsg"></div>`;$('modalBack').classList.add('show')}
 async function allocate(name){try{await api('/api/allocation',{method:'POST',body:JSON.stringify({name,amount:+$('investAmt').value})});closeModal();await loadDashboard();toast('Allocation submitted.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
-function toast(m){let t=document.createElement('div');t.textContent=m;t.style='position:fixed;right:20px;bottom:20px;z-index:50;background:#163022;color:#b9ffd2;border:1px solid #345846;padding:14px 18px;border-radius:12px;font-weight:700';document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+function toast(m){let t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
 calculate();loadSession();
 </script>
 </body>

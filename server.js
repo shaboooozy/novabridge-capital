@@ -207,6 +207,17 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS funding_requests_user_id_idx ON funding_requests(user_id, id DESC);
+    CREATE TABLE IF NOT EXISTS linked_wallets (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      network TEXT NOT NULL,
+      address TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'manual',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, network, address)
+    );
+    CREATE INDEX IF NOT EXISTS linked_wallets_user_id_idx ON linked_wallets(user_id, id DESC);
     CREATE TABLE IF NOT EXISTS deposit_wallets (
       id BIGSERIAL PRIMARY KEY,
       network TEXT NOT NULL UNIQUE,
@@ -470,6 +481,37 @@ app.get('/api/dashboard', auth, async (req, res) => {
     activities: a.rows.map(x => ({ ...x, amount: money(x.amount_cents) })),
     products: products.rows.map(x => ({ ...x, minimum: money(x.minimum_cents) }))
   });
+});
+
+app.get('/api/linked-wallets', auth, async (req, res) => {
+  const result = await q('SELECT id,network,address,label,source,created_at FROM linked_wallets WHERE user_id=$1 ORDER BY id DESC', [req.session.userId]);
+  res.json({ wallets: result.rows });
+});
+
+app.post('/api/linked-wallets', auth, async (req, res) => {
+  const network = String(req.body.network || '').toLowerCase();
+  let address = String(req.body.address || '').trim();
+  const label = String(req.body.label || '').trim().slice(0, 40);
+  const source = req.body.source === 'browser' ? 'browser' : 'manual';
+  if (network === 'ethereum') address = address.toLowerCase();
+  if (!walletPatterns[network] || !walletPatterns[network].test(address)) return res.status(400).json({ error: 'Enter a valid wallet address for the selected network.' });
+  const result = await q(
+    `INSERT INTO linked_wallets(user_id,network,address,label,source) VALUES($1,$2,$3,$4,$5)
+     ON CONFLICT (user_id, network, address) DO UPDATE SET label=EXCLUDED.label, source=EXCLUDED.source
+     RETURNING id,network,address,label,source,created_at`,
+    [req.session.userId, network, address, label, source]
+  );
+  await audit(req, 'wallet.linked', { network, source });
+  res.status(201).json({ wallet: result.rows[0] });
+});
+
+app.delete('/api/linked-wallets/:id', auth, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Select a wallet.' });
+  const result = await q('DELETE FROM linked_wallets WHERE id=$1 AND user_id=$2 RETURNING id', [id, req.session.userId]);
+  if (!result.rows[0]) return res.status(404).json({ error: 'Wallet not found.' });
+  await audit(req, 'wallet.unlinked', { linkedWalletId: id });
+  res.json({ ok: true });
 });
 
 app.post('/api/withdrawals', auth, verified, restricted, async (req, res) => {
