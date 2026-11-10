@@ -1058,26 +1058,46 @@ app.post('/api/admin/withdrawals/:id/decline', auth, admin, (req, res) => review
 
 app.get('/api/admin/applications', auth, admin, async (req, res) => {
   const result = await q(`
-    SELECT a.id,a.user_id,a.product,a.amount_cents,a.purpose,a.network,a.wallet_address,a.status,a.review_note,a.created_at,u.name,u.email
-    FROM credit_applications a JOIN users u ON u.id=a.user_id
+    SELECT a.id,a.user_id,a.product,a.amount_cents,a.purpose,a.network,a.wallet_address,a.status,a.review_note,a.created_at,u.name,u.email,p.cash_cents
+    FROM credit_applications a
+    JOIN users u ON u.id=a.user_id
+    LEFT JOIN portfolios p ON p.user_id=a.user_id
     ORDER BY a.id DESC LIMIT 100
   `);
-  res.json({ applications: result.rows.map(row => ({ ...row, amount: money(row.amount_cents), accountNumber: accountNumber(row.user_id) })) });
+  res.json({ applications: result.rows.map(row => ({ ...row, amount: money(row.amount_cents), cash: money(row.cash_cents), accountNumber: accountNumber(row.user_id) })) });
 });
 
 app.post('/api/admin/applications/:id/:decision', auth, admin, async (req, res) => {
   const id = parseId(req.params.id);
-  const decision = req.params.decision === 'approve' ? 'Approved' : req.params.decision === 'decline' ? 'Declined' : '';
-  if (!id || !decision) return res.status(400).json({ error: 'Choose a valid application.' });
+  const approve = req.params.decision === 'approve';
+  const decline = req.params.decision === 'decline';
+  if (!id || (!approve && !decline)) return res.status(400).json({ error: 'Choose a valid application.' });
   const note = String(req.body.note || '').slice(0, 240);
-  const result = await q(
-    `UPDATE credit_applications SET status=$1, review_note=$2, reviewed_by=$3, reviewed_at=NOW()
-     WHERE id=$4 AND status='Pending' RETURNING id,user_id,product,status`,
-    [decision, note, req.session.userId, id]
-  );
-  if (!result.rows[0]) return res.status(409).json({ error: 'That application is no longer pending.' });
-  await audit(req, decision === 'Approved' ? 'credit.approved' : 'credit.declined', { applicationId: id, product: result.rows[0].product });
-  res.json({ ok: true, application: result.rows[0] });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const appRow = await client.query('SELECT * FROM credit_applications WHERE id=$1 FOR UPDATE', [id]);
+    const item = appRow.rows[0];
+    if (!item) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Application not found.' }); }
+    if (item.status !== 'Pending') { await client.query('ROLLBACK'); return res.status(409).json({ error: 'That application is no longer pending.' }); }
+    let balance = null;
+    if (approve) {
+      const label = item.product === 'credit_card' ? 'Credit line disbursement' : 'Loan disbursement';
+      await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [item.amount_cents, item.user_id]);
+      await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [item.user_id, label, item.product === 'credit_card' ? 'Credit' : 'Loan', item.amount_cents, 'Completed']);
+      const bal = await client.query('SELECT cash_cents FROM portfolios WHERE user_id=$1', [item.user_id]);
+      balance = money(bal.rows[0]?.cash_cents || 0);
+    }
+    const status = approve ? 'Disbursed' : 'Declined';
+    await client.query('UPDATE credit_applications SET status=$1, review_note=$2, reviewed_by=$3, reviewed_at=NOW() WHERE id=$4', [status, note || null, req.session.userId, id]);
+    await client.query('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [req.session.userId, approve ? 'credit.disbursed' : 'credit.declined', { applicationId: id, userId: item.user_id, amount: money(item.amount_cents), product: item.product }]);
+    await client.query('COMMIT');
+    res.json({ ok: true, status, amount: money(item.amount_cents), balance });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'The application could not be updated.' });
+  } finally { client.release(); }
 });
 
 app.get('/api/admin/wallets', auth, admin, async (req, res) => {

@@ -380,6 +380,7 @@ function openInvest(name){$('modalKicker').textContent='OPPORTUNITY';$('modalTit
 async function allocate(name){try{await api('/api/allocation',{method:'POST',body:JSON.stringify({name,amount:+$('investAmt').value})});closeModal();await loadDashboard();toast('Allocation submitted.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
 function toast(m){let t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
 calculate();loadSession();
+setInterval(()=>{if(currentUser&&document.visibilityState==='visible')loadDashboard().catch(()=>{})},15000);
 </script>
 </body>
 </html>

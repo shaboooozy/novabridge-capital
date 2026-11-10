@@ -205,7 +205,7 @@
 
     <section class="grid tab-panel hidden" id="panel-applications">
       <div class="panel full">
-        <div class="panel-head"><h2>Loan and card applications</h2><span class="muted">A decision does not open the client wallet</span></div>
+        <div class="panel-head"><h2>Loan and card applications</h2><span class="muted">Disburse posts the amount to that client's cash account immediately</span></div>
         <div class="panel-body">
           <table>
             <thead><tr><th>Client</th><th>Product</th><th>Amount</th><th>Wallet</th><th>Status</th><th></th></tr></thead>
@@ -354,11 +354,11 @@
         <tr>
           <td>${esc(item.name)}<br><span class="muted">${esc(item.accountNumber)} · ${esc(item.email)}</span></td>
           <td>${item.product === 'credit_card' ? 'Credit card' : 'Loan'}<br><span class="muted">${esc(item.purpose || '')}</span></td>
-          <td>${money(item.amount)}</td>
+          <td>${esc(item.amount)}<br><span class="muted">Cash ${esc(item.cash || '$0.00')}</span></td>
           <td class="wallet">${esc(item.network)}<br>${esc(item.wallet_address)}</td>
           <td>${requestBadge(item.status)}</td>
           <td>${item.status === 'Pending' ? `<div class="btn-row">
-            <button class="btn small primary" onclick="reviewApplication(${item.id}, 'approve')">Accept</button>
+            <button class="btn small primary" onclick="reviewApplication(${item.id}, 'approve')">Disburse</button>
             <button class="btn small danger" onclick="reviewApplication(${item.id}, 'decline')">Decline</button>
           </div>` : ''}</td>
         </tr>
@@ -368,8 +368,8 @@
     async function reviewApplication(id, decision) {
       try {
         const note = prompt(decision === 'approve' ? 'Optional review note' : 'Reason for decline') || '';
-        await api('/api/admin/applications/' + id + '/' + decision, { method: 'POST', body: JSON.stringify({ note }) });
-        notice(decision === 'approve' ? 'Application accepted.' : 'Application declined.');
+        const result = await api('/api/admin/applications/' + id + '/' + decision, { method: 'POST', body: JSON.stringify({ note }) });
+        notice(decision === 'approve' ? `Disbursed ${result.amount}. Account cash is ${result.balance}.` : 'Application declined.');
         await loadAll();
       } catch (error) {
         notice(error.message, 'error');
@@ -393,6 +393,11 @@
         try { await selectUser(selectedUserId); } catch (_) { selectedUserId = null; }
       }
     }
+
+    setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      loadAll().catch(() => {});
+    }, 12000);
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
