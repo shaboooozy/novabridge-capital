@@ -173,6 +173,7 @@
               <button class="btn danger" type="button" id="debitBtn">Debit</button>
             </div>
           </form>
+          <div id="clientWallets" class="stack" style="margin-top:16px"></div>
         </div>
       </aside>
     </section>
@@ -287,6 +288,8 @@
       $('editNotes').value = user.adminNotes || '';
       $('editFlagReason').value = user.flagReason || '';
       $('editPassword').value = '';
+      const wallets = data.wallets || [];
+      $('clientWallets').innerHTML = '<h3>Connected wallets</h3>' + (wallets.length ? wallets.map(wallet => `<p class="wallet">${esc(wallet.wallet_name || wallet.label || wallet.network)} · ${esc(wallet.network)} · ${wallet.source === 'connected' ? 'Approved in the wallet' : 'Address entered'}<br>${esc(wallet.address)}</p>`).join('') : '<p class="muted">This client has not connected a wallet. They approve the link from their own wallet app. You cannot open their wallet from here.</p>');
     }
 
     function renderRequests(tbodyId, rows, kind) {

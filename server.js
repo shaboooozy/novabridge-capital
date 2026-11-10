@@ -4,6 +4,9 @@ const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
+const { verifyMessage } = require('ethers');
+const nacl = require('tweetnacl');
+const bs58 = require('bs58');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
@@ -218,6 +221,7 @@ async function initDb() {
       UNIQUE (user_id, network, address)
     );
     CREATE INDEX IF NOT EXISTS linked_wallets_user_id_idx ON linked_wallets(user_id, id DESC);
+    ALTER TABLE linked_wallets ADD COLUMN IF NOT EXISTS wallet_name TEXT NOT NULL DEFAULT '';
     CREATE TABLE IF NOT EXISTS deposit_wallets (
       id BIGSERIAL PRIMARY KEY,
       network TEXT NOT NULL UNIQUE,
@@ -483,8 +487,66 @@ app.get('/api/dashboard', auth, async (req, res) => {
   });
 });
 
+const linkMessage = (email, nonce) => `NovaBridge Capital\nLink wallet to ${email}\n${nonce}`;
+
+app.get('/api/linked-wallets/nonce', auth, async (req, res) => {
+  const user = await q('SELECT email FROM users WHERE id=$1', [req.session.userId]);
+  if (!user.rows[0]) return res.status(401).json({ error: 'Account not found.' });
+  const nonce = crypto.randomBytes(16).toString('hex');
+  req.session.walletNonce = nonce;
+  req.session.save(err => {
+    if (err) return res.status(500).json({ error: 'Unable to start the wallet connection.' });
+    res.json({ message: linkMessage(user.rows[0].email, nonce) });
+  });
+});
+
+app.post('/api/linked-wallets/connect', auth, async (req, res) => {
+  try {
+    const nonce = req.session.walletNonce;
+    if (!nonce) return res.status(400).json({ error: 'Start the wallet connection again.' });
+    const user = await q('SELECT email FROM users WHERE id=$1', [req.session.userId]);
+    if (!user.rows[0]) return res.status(401).json({ error: 'Account not found.' });
+    const network = String(req.body.network || '').toLowerCase();
+    let address = String(req.body.address || '').trim();
+    const signature = String(req.body.signature || '').trim();
+    const walletName = String(req.body.walletName || '').trim().slice(0, 40);
+    const message = linkMessage(user.rows[0].email, nonce);
+    if (network === 'ethereum') {
+      address = address.toLowerCase();
+      let recovered = '';
+      try { recovered = verifyMessage(message, signature).toLowerCase(); }
+      catch { return res.status(400).json({ error: 'The wallet signature could not be checked.' }); }
+      if (recovered !== address) return res.status(400).json({ error: 'That wallet did not approve the link.' });
+    } else if (network === 'solana') {
+      let ok = false;
+      try {
+        const msg = Buffer.from(message);
+        const sig = Buffer.from(signature, 'base64');
+        const pub = bs58.decode(address);
+        ok = nacl.sign.detached.verify(msg, sig, pub);
+      } catch { ok = false; }
+      if (!ok) return res.status(400).json({ error: 'That wallet did not approve the link.' });
+    } else {
+      return res.status(400).json({ error: 'Connect MetaMask, Coinbase, Trust, or Phantom for this link.' });
+    }
+    if (!walletPatterns[network] || !walletPatterns[network].test(address)) return res.status(400).json({ error: 'The wallet returned an unusable address.' });
+    delete req.session.walletNonce;
+    const result = await q(
+      `INSERT INTO linked_wallets(user_id,network,address,label,source,wallet_name) VALUES($1,$2,$3,$4,'connected',$5)
+       ON CONFLICT (user_id, network, address) DO UPDATE SET label=EXCLUDED.label, source='connected', wallet_name=EXCLUDED.wallet_name
+       RETURNING id,network,address,label,source,wallet_name,created_at`,
+      [req.session.userId, network, address, walletName || network, walletName]
+    );
+    await audit(req, 'wallet.connected', { network, walletName });
+    res.status(201).json({ wallet: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'The wallet could not be linked.' });
+  }
+});
+
 app.get('/api/linked-wallets', auth, async (req, res) => {
-  const result = await q('SELECT id,network,address,label,source,created_at FROM linked_wallets WHERE user_id=$1 ORDER BY id DESC', [req.session.userId]);
+  const result = await q('SELECT id,network,address,label,source,wallet_name,created_at FROM linked_wallets WHERE user_id=$1 ORDER BY id DESC', [req.session.userId]);
   res.json({ wallets: result.rows });
 });
 
@@ -710,9 +772,11 @@ app.get('/api/admin/users/:id', auth, admin, async (req, res) => {
   `, [userId]);
   if (!result.rows[0]) return res.status(404).json({ error: 'User not found.' });
   const activities = await q('SELECT id,activity,type,amount_cents,status,created_at FROM activities WHERE user_id=$1 ORDER BY id DESC LIMIT 30', [userId]);
+  const wallets = await q('SELECT id,network,address,label,source,wallet_name,created_at FROM linked_wallets WHERE user_id=$1 ORDER BY id DESC', [userId]);
   res.json({
     user: mapUser(result.rows[0]),
-    activities: activities.rows.map(item => ({ ...item, amount: money(item.amount_cents) }))
+    activities: activities.rows.map(item => ({ ...item, amount: money(item.amount_cents) })),
+    wallets: wallets.rows
   });
 });
 
