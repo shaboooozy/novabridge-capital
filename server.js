@@ -271,7 +271,7 @@ function admin(req, res, next) {
 
 async function verified(req, res, next) {
   const result = await q('SELECT email_verified_at FROM users WHERE id=$1', [req.session.userId]);
-  if (!result.rows[0]?.email_verified_at) return res.status(403).json({ error: 'Verify your email before requesting funding, allocations, or withdrawals.' });
+  if (!result.rows[0]?.email_verified_at) return res.status(403).json({ error: 'Verify your email before requesting a withdrawal or allocation.' });
   next();
 }
 
@@ -339,10 +339,10 @@ app.post('/api/register', async (req, res) => {
       const verificationUrl = `${APP_URL}/api/verify-email?token=${verificationToken}`;
       try {
         const mail = await sendMail(e, 'Verify your NovaBridge email', `Verify your email by opening: ${verificationUrl}`);
-        if (!mail.sent) response.verificationUrl = verificationUrl;
+        if (!mail.sent) response.emailSent = false;
       } catch (mailErr) {
         console.error(mailErr);
-        response.verificationUrl = verificationUrl;
+        response.emailSent = false;
       }
       res.status(201).json(response);
     } catch (err) {
@@ -414,10 +414,10 @@ app.post('/api/password-reset/request', async (req, res) => {
     const resetUrl = `${APP_URL}/reset-password.html?token=${token}`;
     try {
       const mail = await sendMail(e, 'Reset your NovaBridge password', `Reset your password by opening: ${resetUrl}`);
-      if (!mail.sent) response.resetUrl = resetUrl;
+      if (!mail.sent) response.emailed = false;
     } catch (mailErr) {
       console.error(mailErr);
-      response.resetUrl = resetUrl;
+      response.emailed = false;
     }
   }
   res.json(response);
@@ -596,7 +596,7 @@ app.post('/api/admin/products/:id/verify', auth, admin, async (req, res) => {
 
 // Funding requests do not increase the balance. A verified payment/custodian webhook
 // must call /api/webhooks/funding before settled funds become available.
-app.post('/api/funding-request', auth, verified, restricted, async (req, res) => {
+app.post('/api/funding-request', auth, restricted, async (req, res) => {
   const n = Number(req.body.amount);
   const network = String(req.body.network || '').toLowerCase();
   if (!Number.isFinite(n) || n < 100 || n > 1000000) return res.status(400).json({ error: 'Amount must be between $100 and $1,000,000.' });
