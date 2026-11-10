@@ -81,8 +81,31 @@ const mailer = process.env.SMTP_HOST ? nodemailer.createTransport({
   auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } : undefined
 }) : null;
 async function sendMail(to, subject, text) {
-  if (!mailer) { if (!isProduction) console.log(`Development email for ${to}: ${subject}\n${text}`); return; }
-  await mailer.sendMail({ from: process.env.EMAIL_FROM, to, subject, text });
+  if (process.env.RESEND_API_KEY) {
+    const from = process.env.EMAIL_FROM || 'NovaBridge <onboarding@resend.dev>';
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + process.env.RESEND_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ from, to: [to], subject, text })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.error('Resend error', response.status, detail.slice(0, 300));
+      const error = new Error('Email could not be sent.');
+      error.code = 'MAIL_FAILED';
+      throw error;
+    }
+    return { sent: true };
+  }
+  if (mailer) {
+    await mailer.sendMail({ from: process.env.EMAIL_FROM, to, subject, text });
+    return { sent: true };
+  }
+  if (!isProduction) console.log(`Development email for ${to}: ${subject}\n${text}`);
+  return { sent: false };
 }
 const audit = async (req, action, metadata = {}) => {
   try { await q('INSERT INTO audit_logs(user_id,action,ip_address,metadata) VALUES($1,$2,$3,$4)', [req.session.userId || null, action, req.ip, metadata]); }
@@ -314,8 +337,13 @@ app.post('/api/register', async (req, res) => {
       req.session.role = 'user';
       const response = { user: u, emailVerificationRequired: true };
       const verificationUrl = `${APP_URL}/api/verify-email?token=${verificationToken}`;
-      await sendMail(e, 'Verify your NovaBridge email', `Verify your email by opening: ${verificationUrl}`);
-      if (!isProduction) response.developmentVerificationUrl = verificationUrl;
+      try {
+        const mail = await sendMail(e, 'Verify your NovaBridge email', `Verify your email by opening: ${verificationUrl}`);
+        if (!mail.sent) response.verificationUrl = verificationUrl;
+      } catch (mailErr) {
+        console.error(mailErr);
+        response.verificationUrl = verificationUrl;
+      }
       res.status(201).json(response);
     } catch (err) {
       await client.query('ROLLBACK');
@@ -349,6 +377,24 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
 
+app.post('/api/verification/send', auth, async (req, res) => {
+  try {
+    const user = await q('SELECT id,email,email_verified_at FROM users WHERE id=$1', [req.session.userId]);
+    if (!user.rows[0]) return res.status(401).json({ error: 'Account not found.' });
+    if (user.rows[0].email_verified_at) return res.json({ ok: true, alreadyVerified: true });
+    const token = makeToken();
+    await q('UPDATE users SET verification_token_hash=$1 WHERE id=$2', [tokenHash(token), user.rows[0].id]);
+    const verificationUrl = `${APP_URL}/api/verify-email?token=${token}`;
+    const mail = await sendMail(user.rows[0].email, 'Verify your NovaBridge email', `Verify your email by opening: ${verificationUrl}`);
+    const response = { ok: true, emailed: mail.sent };
+    if (!mail.sent) response.verificationUrl = verificationUrl;
+    res.json(response);
+  } catch (err) {
+    console.error(err);
+    res.status(err.code === 'MAIL_FAILED' ? 502 : 500).json({ error: err.code === 'MAIL_FAILED' ? err.message : 'Unable to send verification.' });
+  }
+});
+
 app.get('/api/verify-email', async (req, res) => {
   const token = String(req.query.token || '');
   if (!token) return res.status(400).send('Invalid verification link.');
@@ -366,8 +412,13 @@ app.post('/api/password-reset/request', async (req, res) => {
     await q('UPDATE users SET reset_token_hash=$1, reset_token_expires_at=NOW()+INTERVAL \'30 minutes\' WHERE id=$2', [tokenHash(token), result.rows[0].id]);
     await q('INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)', [result.rows[0].id, 'password.reset_requested', { email: e }]);
     const resetUrl = `${APP_URL}/reset-password.html?token=${token}`;
-    await sendMail(e, 'Reset your NovaBridge password', `Reset your password by opening: ${resetUrl}`);
-    if (!isProduction) response.developmentResetUrl = resetUrl;
+    try {
+      const mail = await sendMail(e, 'Reset your NovaBridge password', `Reset your password by opening: ${resetUrl}`);
+      if (!mail.sent) response.resetUrl = resetUrl;
+    } catch (mailErr) {
+      console.error(mailErr);
+      response.resetUrl = resetUrl;
+    }
   }
   res.json(response);
 });

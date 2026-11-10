@@ -77,9 +77,19 @@
     .hidden { display: none; }
     .wallet { word-break: break-all; font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; }
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .gate { margin-top: 28px; padding: 22px; border: 1px solid var(--stroke); border-radius: 18px; background: rgba(16,29,27,0.85); line-height: 1.5; }
+    .gate h2 { margin-bottom: 10px; }
+    .gate a { color: var(--brand); }
     @media (max-width: 980px) {
       .grid, .row { grid-template-columns: 1fr; }
       header { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 720px) {
+      .wrap { padding: 16px 12px 64px; }
+      .brand { letter-spacing: 0.08em; font-size: 1rem; }
+      .panel-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { min-width: 680px; }
+      .tab, .btn { min-height: 44px; }
     }
   </style>
 </head>
@@ -101,6 +111,7 @@
     </div>
 
     <div id="globalNotice" class="notice hidden" style="margin-top:18px"></div>
+    <div id="gate" class="gate hidden"></div>
 
     <section class="grid tab-panel" id="panel-accounts">
       <div class="panel">
@@ -447,16 +458,37 @@
       window.location.href = '/';
     });
 
+    function showGate(message) {
+      document.querySelectorAll('.tabs, .tab-panel').forEach(el => el.classList.add('hidden'));
+      const gate = $('gate');
+      gate.classList.remove('hidden');
+      gate.replaceChildren();
+      const title = document.createElement('h2');
+      title.textContent = 'Admin is locked';
+      const body = document.createElement('p');
+      body.textContent = message;
+      const back = document.createElement('p');
+      const link = document.createElement('a');
+      link.href = '/';
+      link.textContent = 'Return to the site';
+      back.appendChild(link);
+      gate.append(title, body, back);
+    }
+
     (async function init() {
       try {
         const me = await api('/api/me');
-        if (!me.authenticated || me.user.role !== 'admin') {
-          window.location.href = '/';
+        if (!me.authenticated) {
+          showGate('Log in on the site first, then open Admin from the menu.');
+          return;
+        }
+        if (me.user.role !== 'admin') {
+          showGate('Signed in as ' + me.user.email + '. That account is not an administrator. In the Vercel project, set ADMIN_EMAIL to this exact address and redeploy.');
           return;
         }
         await loadAll();
-      } catch (_) {
-        window.location.href = '/';
+      } catch (error) {
+        showGate(error.message || 'Could not open admin.');
       }
     })();
   </script>
