@@ -220,7 +220,7 @@ body:not(.logged-in) .client-link{display:none}
    <label>Initial investment: <b id="amountLabel">$10,000</b></label>
    <input id="amount" class="range" type="range" min="500" max="100000" step="500" value="10000" oninput="calculate()">
   <label>Scenario rate</label>
-  <select id="rate" onchange="calculate()"><option value="0.001">0.10% weekly scenario</option><option value="0.004" selected>0.40% monthly scenario</option><option value="0.05">5% annual scenario</option><option value="0.10">10% annual scenario</option></select>
+  <select id="rate" onchange="calculate()"><option value="10">10% weekly scenario</option><option value="40" selected>40% monthly scenario</option><option value="165">165% annual scenario</option><option value="0.10">10% annual scenario</option></select>
    <label>Scenario period</label>
    <select id="years" onchange="calculate()"><option value="1">1 period</option><option value="3" selected>3 periods</option><option value="6">6 periods</option><option value="12">12 periods</option></select>
   <div class="result"><div class="muted">Illustrative value</div><div class="big" id="ending">$13,310</div><div class="up" id="gain">+$3,310 at selected rate</div></div>
