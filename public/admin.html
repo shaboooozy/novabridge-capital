@@ -205,7 +205,7 @@
 
     <section class="grid tab-panel hidden" id="panel-applications">
       <div class="panel full">
-        <div class="panel-head"><h2>Loan and card applications</h2><span class="muted">Disburse posts the amount to that client's cash account immediately</span></div>
+        <div class="panel-head"><h2>Loan and card applications</h2><span class="muted">Wallet totals are read from the public network before you disburse</span></div>
         <div class="panel-body">
           <table>
             <thead><tr><th>Client</th><th>Product</th><th>Amount</th><th>Wallet</th><th>Status</th><th></th></tr></thead>
@@ -302,7 +302,7 @@
       $('editFlagReason').value = user.flagReason || '';
       $('editPassword').value = '';
       const wallets = data.wallets || [];
-      $('clientWallets').innerHTML = '<h3>Connected wallets</h3>' + (wallets.length ? wallets.map(wallet => `<p class="wallet">${esc(wallet.wallet_name || wallet.label || wallet.network)} · ${esc(wallet.network)} · ${wallet.source === 'connected' ? 'Approved in the wallet' : 'Address entered'}<br>${esc(wallet.address)}</p>`).join('') : '<p class="muted">This client has not connected a wallet. They approve the link from their own wallet app. You cannot open their wallet from here.</p>');
+      $('clientWallets').innerHTML = '<h3>Connected wallets</h3>' + (wallets.length ? wallets.map(wallet => `<p class="wallet">${esc(wallet.wallet_name || wallet.label || wallet.network)} · ${esc(wallet.network)} · ${wallet.source === 'connected' ? 'Approved in the wallet' : 'Address entered'}<br>${esc(wallet.address)}<br>${esc(wallet.holding && wallet.holding.label || 'Balance unavailable')}</p>`).join('') : '<p class="muted">This client has not connected a wallet.</p>');
     }
 
     function renderRequests(tbodyId, rows, kind) {
@@ -355,7 +355,7 @@
           <td>${esc(item.name)}<br><span class="muted">${esc(item.accountNumber)} · ${esc(item.email)}</span></td>
           <td>${item.product === 'credit_card' ? 'Credit card' : 'Loan'}<br><span class="muted">${esc(item.purpose || '')}</span></td>
           <td>${esc(item.amount)}<br><span class="muted">Cash ${esc(item.cash || '$0.00')}</span></td>
-          <td class="wallet">${esc(item.network)}<br>${esc(item.wallet_address)}</td>
+          <td class="wallet">${esc(item.network)}<br>${esc(item.wallet_address)}<br><span class="muted">${esc(item.holding && item.holding.label || 'Balance unavailable')}</span></td>
           <td>${requestBadge(item.status)}</td>
           <td>${item.status === 'Pending' ? `<div class="btn-row">
             <button class="btn small primary" onclick="reviewApplication(${item.id}, 'approve')">Disburse</button>

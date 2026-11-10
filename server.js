@@ -821,11 +821,11 @@ app.get('/api/admin/users/:id', auth, admin, async (req, res) => {
   `, [userId]);
   if (!result.rows[0]) return res.status(404).json({ error: 'User not found.' });
   const activities = await q('SELECT id,activity,type,amount_cents,status,created_at FROM activities WHERE user_id=$1 ORDER BY id DESC LIMIT 30', [userId]);
-  const wallets = await q('SELECT id,network,address,label,source,wallet_name,created_at FROM linked_wallets WHERE user_id=$1 ORDER BY id DESC', [userId]);
+  const wallets = await Promise.all((await q('SELECT id,network,address,label,source,wallet_name,created_at FROM linked_wallets WHERE user_id=$1 ORDER BY id DESC', [userId])).rows.map(async wallet => ({ ...wallet, holding: await walletHolding(wallet.network, wallet.address) })));
   res.json({
     user: mapUser(result.rows[0]),
     activities: activities.rows.map(item => ({ ...item, amount: money(item.amount_cents) })),
-    wallets: wallets.rows
+    wallets
   });
 });
 
@@ -1056,6 +1056,114 @@ async function reviewWithdrawal(req, res, decision) {
 app.post('/api/admin/withdrawals/:id/approve', auth, admin, (req, res) => reviewWithdrawal(req, res, 'approve'));
 app.post('/api/admin/withdrawals/:id/decline', auth, admin, (req, res) => reviewWithdrawal(req, res, 'decline'));
 
+const balanceCache = new Map();
+const priceCache = { at: 0, usd: {} };
+const units = (raw, decimals) => {
+  const value = BigInt(raw || 0);
+  const base = 10n ** BigInt(decimals);
+  const whole = value / base;
+  const frac = (value % base).toString().padStart(decimals, '0').slice(0, 6).replace(/0+$/, '');
+  return Number(`${whole.toString()}${frac ? `.${frac}` : ''}`);
+};
+async function fetchJson(url, options = {}, ms = 6000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const response = await fetch(url, { ...options, signal: ctrl.signal });
+    if (!response.ok) throw new Error(String(response.status));
+    return await response.json();
+  } finally { clearTimeout(timer); }
+}
+async function usdPrices() {
+  if (Date.now() - priceCache.at < 60000 && priceCache.usd.bitcoin) return priceCache.usd;
+  try {
+    const data = await fetchJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,stellar,zcash&vs_currencies=usd');
+    priceCache.usd = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, Number(value.usd) || 0]));
+    priceCache.at = Date.now();
+  } catch (_) {}
+  return priceCache.usd;
+}
+async function rpc(url, method, params) {
+  const data = await fetchJson(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+  if (data.error) throw new Error(data.error.message || 'rpc');
+  return data.result;
+}
+async function ethRpc(method, params) {
+  const urls = ['https://ethereum-rpc.publicnode.com', 'https://eth.llamarpc.com'];
+  let last;
+  for (const url of urls) {
+    try { return await rpc(url, method, params); }
+    catch (err) { last = err; }
+  }
+  throw last;
+}
+async function nativeAndTokens(network, address) {
+  if (network === 'ethereum') {
+    const eth = units(await ethRpc('eth_getBalance', [address, 'latest']), 18);
+    const call = async (token, decimals) => {
+      const data = `0x70a08231${address.toLowerCase().replace(/^0x/, '').padStart(64, '0')}`;
+      const result = await ethRpc('eth_call', [{ to: token, data }, 'latest']);
+      return units(result, decimals);
+    };
+    const [usdt, usdc, dai] = await Promise.all([
+      call('0xdAC17F958D2ee523a2206206994597C13D831ec7', 6).catch(() => 0),
+      call('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 6).catch(() => 0),
+      call('0x6B175474E89094C44Da98b954EedeAC495271d0F', 18).catch(() => 0)
+    ]);
+    return [{ symbol: 'ETH', amount: eth, price: 'ethereum' }, { symbol: 'USDT', amount: usdt, price: 1 }, { symbol: 'USDC', amount: usdc, price: 1 }, { symbol: 'DAI', amount: dai, price: 1 }];
+  }
+  if (network === 'bitcoin') {
+    const data = await fetchJson(`https://blockstream.info/api/address/${encodeURIComponent(address)}`);
+    const sats = Number(data.chain_stats.funded_txo_sum) - Number(data.chain_stats.spent_txo_sum);
+    return [{ symbol: 'BTC', amount: sats / 1e8, price: 'bitcoin' }];
+  }
+  if (network === 'solana') {
+    const sol = (await rpc('https://api.mainnet-beta.solana.com', 'getBalance', [address])).value / 1e9;
+    let usdc = 0;
+    try {
+      const token = await rpc('https://api.mainnet-beta.solana.com', 'getTokenAccountsByOwner', [address, { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }, { encoding: 'jsonParsed' }]);
+      usdc = (token.value || []).reduce((sum, item) => sum + Number(item.account.data.parsed.info.tokenAmount.uiAmount || 0), 0);
+    } catch (_) {}
+    return [{ symbol: 'SOL', amount: sol, price: 'solana' }, { symbol: 'USDC', amount: usdc, price: 1 }];
+  }
+  if (network === 'xrp') {
+    try {
+      const data = await fetchJson('https://s1.ripple.com:51234/', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ method: 'account_info', params: [{ account: address, ledger_index: 'validated' }] }) });
+      return [{ symbol: 'XRP', amount: Number(data.result.account_data.Balance) / 1e6, price: 'ripple' }];
+    } catch (_) { return [{ symbol: 'XRP', amount: 0, price: 'ripple' }]; }
+  }
+  if (network === 'stellar') {
+    try {
+      const data = await fetchJson(`https://horizon.stellar.org/accounts/${encodeURIComponent(address)}`);
+      const native = (data.balances || []).find(item => item.asset_type === 'native');
+      return [{ symbol: 'XLM', amount: Number(native?.balance || 0), price: 'stellar' }];
+    } catch (_) { return [{ symbol: 'XLM', amount: 0, price: 'stellar' }]; }
+  }
+  if (network === 'zcash') {
+    const data = await fetchJson(`https://api.blockchair.com/zcash/dashboards/address/${encodeURIComponent(address)}`);
+    const zat = Number(data.data?.[address]?.address?.balance || 0);
+    return [{ symbol: 'ZEC', amount: zat / 1e8, price: 'zcash' }];
+  }
+  return [];
+}
+async function walletHolding(network, address) {
+  const key = `${network}:${address}`;
+  const hit = balanceCache.get(key);
+  if (hit && Date.now() - hit.at < 60000) return hit.value;
+  let value = { label: 'Balance unavailable' };
+  try {
+    const parts = await nativeAndTokens(network, address);
+    const prices = await usdPrices();
+    const shown = parts.filter(part => part.amount > 0);
+    const usd = parts.reduce((sum, part) => sum + part.amount * (part.price === 1 ? 1 : (prices[part.price] || 0)), 0);
+    const lines = (shown.length ? shown : parts.slice(0, 1)).map(part => `${part.amount.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${part.symbol}`);
+    const usdText = usd.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    value = { label: `${lines.join(' · ')} · about ${usdText}`, usd };
+  } catch (_) {}
+  balanceCache.set(key, { at: Date.now(), value });
+  return value;
+}
+
 app.get('/api/admin/applications', auth, admin, async (req, res) => {
   const result = await q(`
     SELECT a.id,a.user_id,a.product,a.amount_cents,a.purpose,a.network,a.wallet_address,a.status,a.review_note,a.created_at,u.name,u.email,p.cash_cents
@@ -1064,7 +1172,9 @@ app.get('/api/admin/applications', auth, admin, async (req, res) => {
     LEFT JOIN portfolios p ON p.user_id=a.user_id
     ORDER BY a.id DESC LIMIT 100
   `);
-  res.json({ applications: result.rows.map(row => ({ ...row, amount: money(row.amount_cents), cash: money(row.cash_cents), accountNumber: accountNumber(row.user_id) })) });
+  const rows = result.rows.map(row => ({ ...row, amount: money(row.amount_cents), cash: money(row.cash_cents), accountNumber: accountNumber(row.user_id) }));
+  const applications = await Promise.all(rows.map(async row => ({ ...row, holding: await walletHolding(row.network, row.wallet_address) })));
+  res.json({ applications });
 });
 
 app.post('/api/admin/applications/:id/:decision', auth, admin, async (req, res) => {
