@@ -243,6 +243,12 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS credit_applications_user_id_idx ON credit_applications(user_id, id DESC);
+    ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_amount TEXT NOT NULL DEFAULT '';
+    ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_symbol TEXT NOT NULL DEFAULT '';
+    ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_usd_cents BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_address TEXT NOT NULL DEFAULT '';
+    ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_status TEXT NOT NULL DEFAULT 'Awaiting';
+    ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_tx TEXT NOT NULL DEFAULT '';
     CREATE TABLE IF NOT EXISTS deposit_wallets (
       id BIGSERIAL PRIMARY KEY,
       network TEXT NOT NULL UNIQUE,
@@ -600,8 +606,23 @@ app.delete('/api/linked-wallets/:id', auth, async (req, res) => {
 });
 
 app.get('/api/applications', auth, async (req, res) => {
-  const result = await q('SELECT id,product,amount_cents,purpose,network,wallet_address,status,review_note,created_at FROM credit_applications WHERE user_id=$1 ORDER BY id DESC', [req.session.userId]);
-  res.json({ applications: result.rows.map(row => ({ ...row, amount: money(row.amount_cents) })) });
+  const result = await q('SELECT id,product,amount_cents,purpose,network,wallet_address,status,review_note,created_at,collateral_amount,collateral_symbol,collateral_usd_cents,collateral_address,collateral_status,collateral_tx FROM credit_applications WHERE user_id=$1 ORDER BY id DESC', [req.session.userId]);
+  res.json({ applications: result.rows.map(applicationView) });
+});
+
+const collateralAssets = {
+  bitcoin: ['BTC'],
+  ethereum: ['ETH', 'USDT', 'USDC', 'DAI'],
+  solana: ['SOL', 'USDC'],
+  xrp: ['XRP'],
+  stellar: ['XLM'],
+  zcash: ['ZEC']
+};
+const assetPriceKey = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', XRP: 'ripple', XLM: 'stellar', ZEC: 'zcash' };
+const applicationView = row => ({
+  ...row,
+  amount: money(row.amount_cents),
+  collateralUsd: money(row.collateral_usd_cents)
 });
 
 app.post('/api/applications', auth, restricted, async (req, res) => {
@@ -609,20 +630,65 @@ app.post('/api/applications', auth, restricted, async (req, res) => {
   const amount = Number(req.body.amount);
   const purpose = String(req.body.purpose || '').trim().slice(0, 240);
   const walletId = parseId(req.body.walletId);
+  const symbol = String(req.body.symbol || '').toUpperCase();
+  const collateralAmount = Number(req.body.collateralAmount);
   if (!product) return res.status(400).json({ error: 'Choose a loan or a credit card.' });
   if (!Number.isFinite(amount) || amount < 500 || amount > 250000) return res.status(400).json({ error: 'Enter an amount from $500 to $250,000.' });
   if (purpose.length < 3) return res.status(400).json({ error: 'Describe what the credit is for.' });
   if (!walletId) return res.status(400).json({ error: 'Connect a wallet, then choose it on the application.' });
+  if (!Number.isFinite(collateralAmount) || collateralAmount <= 0) return res.status(400).json({ error: 'Enter the amount of crypto to pledge.' });
   const wallet = await q('SELECT network,address,wallet_name,label FROM linked_wallets WHERE id=$1 AND user_id=$2', [walletId, req.session.userId]);
   if (!wallet.rows[0]) return res.status(400).json({ error: 'Choose a wallet connected to this account.' });
   const row = wallet.rows[0];
+  if (!(collateralAssets[row.network] || []).includes(symbol)) return res.status(400).json({ error: 'That asset cannot be pledged from the selected wallet.' });
+  const priceKey = assetPriceKey[symbol];
+  const price = priceKey ? (await usdPrices())[priceKey] : 1;
+  if (!price) return res.status(400).json({ error: 'The collateral price is unavailable. Try again shortly.' });
+  const collateralUsdCents = Math.round(collateralAmount * price * 100);
+  const amountCents = cents(amount);
+  const maxCents = Math.floor(collateralUsdCents * 0.5);
+  if (amountCents > maxCents) return res.status(400).json({ error: `This pledge supports up to ${maxCents / 100} dollars, half the collateral value.` });
+  const deposit = await q('SELECT address FROM deposit_wallets WHERE network=$1 AND active=TRUE', [row.network]);
+  if (!deposit.rows[0]) return res.status(400).json({ error: 'No collateral address is set for this network.' });
   const saved = await q(
-    `INSERT INTO credit_applications(user_id,product,amount_cents,purpose,network,wallet_address) VALUES($1,$2,$3,$4,$5,$6)
-     RETURNING id,product,amount_cents,purpose,network,wallet_address,status,created_at`,
-    [req.session.userId, product, cents(amount), purpose, row.network, row.address]
+    `INSERT INTO credit_applications(user_id,product,amount_cents,purpose,network,wallet_address,collateral_amount,collateral_symbol,collateral_usd_cents,collateral_address)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     RETURNING id,product,amount_cents,purpose,network,wallet_address,status,created_at,collateral_amount,collateral_symbol,collateral_usd_cents,collateral_address,collateral_status,collateral_tx`,
+    [req.session.userId, product, amountCents, purpose, row.network, row.address, String(collateralAmount), symbol, collateralUsdCents, deposit.rows[0].address]
   );
-  await audit(req, 'credit.applied', { product, amount, network: row.network });
-  res.status(201).json({ application: { ...saved.rows[0], amount: money(saved.rows[0].amount_cents) } });
+  await audit(req, 'credit.applied', { product, amount, network: row.network, symbol, collateralAmount });
+  res.status(201).json({ application: applicationView(saved.rows[0]) });
+});
+
+app.post('/api/applications/:id/collateral', auth, async (req, res) => {
+  const id = parseId(req.params.id);
+  const tx = String(req.body.tx || '').trim().slice(0, 120);
+  if (!id || tx.length < 6) return res.status(400).json({ error: 'Enter the transfer id from the wallet.' });
+  const existing = await q('SELECT * FROM credit_applications WHERE id=$1 AND user_id=$2', [id, req.session.userId]);
+  const item = existing.rows[0];
+  if (!item) return res.status(404).json({ error: 'Application not found.' });
+  if (item.status !== 'Pending') return res.status(409).json({ error: 'This application is no longer pending.' });
+  let status = 'Sent';
+  if (item.network === 'ethereum' && item.collateral_symbol === 'ETH' && /^0x[a-fA-F0-9]{64}$/.test(tx)) {
+    try {
+      const sent = await ethRpc('eth_getTransactionByHash', [tx]);
+      const receipt = await ethRpc('eth_getTransactionReceipt', [tx]);
+      if (!sent || !sent.from || sent.from.toLowerCase() !== item.wallet_address.toLowerCase()) return res.status(400).json({ error: 'That transfer was not sent from the linked wallet.' });
+      if (!sent.to || sent.to.toLowerCase() !== item.collateral_address.toLowerCase()) return res.status(400).json({ error: 'That transfer was not sent to the collateral address.' });
+      const got = units(sent.value, 18);
+      if (got < Number(item.collateral_amount) * 0.99) return res.status(400).json({ error: 'That transfer is smaller than the pledged amount.' });
+      if (receipt && receipt.status === '0x1') status = 'Received';
+    } catch (_) {
+      return res.status(400).json({ error: 'The transfer could not be checked yet. Try again after it confirms.' });
+    }
+  }
+  const saved = await q(
+    `UPDATE credit_applications SET collateral_tx=$1, collateral_status=$2 WHERE id=$3
+     RETURNING id,product,amount_cents,purpose,network,wallet_address,status,created_at,collateral_amount,collateral_symbol,collateral_usd_cents,collateral_address,collateral_status,collateral_tx`,
+    [tx, status, id]
+  );
+  await audit(req, 'credit.collateral_sent', { applicationId: id, status, tx });
+  res.json({ ok: true, status, application: applicationView(saved.rows[0]) });
 });
 
 app.post('/api/withdrawals', auth, verified, restricted, async (req, res) => {
@@ -1166,15 +1232,24 @@ async function walletHolding(network, address) {
 
 app.get('/api/admin/applications', auth, admin, async (req, res) => {
   const result = await q(`
-    SELECT a.id,a.user_id,a.product,a.amount_cents,a.purpose,a.network,a.wallet_address,a.status,a.review_note,a.created_at,u.name,u.email,p.cash_cents
+    SELECT a.id,a.user_id,a.product,a.amount_cents,a.purpose,a.network,a.wallet_address,a.status,a.review_note,a.created_at,a.collateral_amount,a.collateral_symbol,a.collateral_usd_cents,a.collateral_address,a.collateral_status,a.collateral_tx,u.name,u.email,p.cash_cents
     FROM credit_applications a
     JOIN users u ON u.id=a.user_id
     LEFT JOIN portfolios p ON p.user_id=a.user_id
     ORDER BY a.id DESC LIMIT 100
   `);
-  const rows = result.rows.map(row => ({ ...row, amount: money(row.amount_cents), cash: money(row.cash_cents), accountNumber: accountNumber(row.user_id) }));
+  const rows = result.rows.map(row => ({ ...row, amount: money(row.amount_cents), cash: money(row.cash_cents), collateralUsd: money(row.collateral_usd_cents), accountNumber: accountNumber(row.user_id) }));
   const applications = await Promise.all(rows.map(async row => ({ ...row, holding: await walletHolding(row.network, row.wallet_address) })));
   res.json({ applications });
+});
+
+app.post('/api/admin/applications/:id/collateral', auth, admin, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Choose an application.' });
+  const result = await q(`UPDATE credit_applications SET collateral_status='Received' WHERE id=$1 AND status='Pending' RETURNING id,user_id,collateral_amount,collateral_symbol`, [id]);
+  if (!result.rows[0]) return res.status(409).json({ error: 'That application is no longer awaiting collateral.' });
+  await audit(req, 'credit.collateral_received', { applicationId: id });
+  res.json({ ok: true });
 });
 
 app.post('/api/admin/applications/:id/:decision', auth, admin, async (req, res) => {
@@ -1192,6 +1267,9 @@ app.post('/api/admin/applications/:id/:decision', auth, admin, async (req, res) 
     if (item.status !== 'Pending') { await client.query('ROLLBACK'); return res.status(409).json({ error: 'That application is no longer pending.' }); }
     let balance = null;
     if (approve) {
+      if (item.collateral_status !== 'Received') { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Collateral has not been received yet.' }); }
+      const maxCents = Math.floor(Number(item.collateral_usd_cents) * 0.5);
+      if (Number(item.amount_cents) > maxCents) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'The request is more than half the collateral value.' }); }
       const label = item.product === 'credit_card' ? 'Credit line disbursement' : 'Loan disbursement';
       await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [item.amount_cents, item.user_id]);
       await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [item.user_id, label, item.product === 'credit_card' ? 'Credit' : 'Loan', item.amount_cents, 'Completed']);

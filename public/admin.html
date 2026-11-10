@@ -205,7 +205,7 @@
 
     <section class="grid tab-panel hidden" id="panel-applications">
       <div class="panel full">
-        <div class="panel-head"><h2>Loan and card applications</h2><span class="muted">Wallet totals are read from the public network before you disburse</span></div>
+        <div class="panel-head"><h2>Loan and card applications</h2><span class="muted">Disburse only after the pledged crypto has been received. Maximum is half its value.</span></div>
         <div class="panel-body">
           <table>
             <thead><tr><th>Client</th><th>Product</th><th>Amount</th><th>Wallet</th><th>Status</th><th></th></tr></thead>
@@ -355,7 +355,7 @@
           <td>${esc(item.name)}<br><span class="muted">${esc(item.accountNumber)} · ${esc(item.email)}</span></td>
           <td>${item.product === 'credit_card' ? 'Credit card' : 'Loan'}<br><span class="muted">${esc(item.purpose || '')}</span></td>
           <td>${esc(item.amount)}<br><span class="muted">Cash ${esc(item.cash || '$0.00')}</span></td>
-          <td class="wallet">${esc(item.network)}<br>${esc(item.wallet_address)}<br><span class="muted">${esc(item.holding && item.holding.label || 'Balance unavailable')}</span></td>
+          <td class="wallet">${esc(item.network)}<br>${esc(item.wallet_address)}<br><span class="muted">${esc(item.holding && item.holding.label || 'Balance unavailable')}</span><br><span class="muted">Pledge ${esc(item.collateral_amount || '0')} ${esc(item.collateral_symbol || '')} · ${esc(item.collateral_status || 'Awaiting')} · ${money(item.collateralUsd)}</span>${item.status === 'Pending' && item.collateral_status !== 'Received' ? `<div class="btn-row"><button class="btn small" type="button" onclick="markCollateral(${item.id})">Collateral received</button></div>` : ''}</td>
           <td>${requestBadge(item.status)}</td>
           <td>${item.status === 'Pending' ? `<div class="btn-row">
             <button class="btn small primary" onclick="reviewApplication(${item.id}, 'approve')">Disburse</button>
@@ -363,6 +363,16 @@
           </div>` : ''}</td>
         </tr>
       `).join('') : '<tr><td colspan="6" class="muted">No applications.</td></tr>';
+    }
+
+    async function markCollateral(id) {
+      try {
+        await api('/api/admin/applications/' + id + '/collateral', { method: 'POST', body: JSON.stringify({}) });
+        notice('Collateral marked received.');
+        await loadAll();
+      } catch (error) {
+        notice(error.message, 'error');
+      }
     }
 
     async function reviewApplication(id, decision) {
