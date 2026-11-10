@@ -107,6 +107,7 @@
       <button class="tab active" data-tab="accounts">Accounts</button>
       <button class="tab" data-tab="funding">Funding</button>
       <button class="tab" data-tab="withdrawals">Withdrawals</button>
+      <button class="tab" data-tab="applications">Applications</button>
       <button class="tab" data-tab="wallets">Wallets</button>
     </div>
 
@@ -202,6 +203,18 @@
       </div>
     </section>
 
+    <section class="grid tab-panel hidden" id="panel-applications">
+      <div class="panel full">
+        <div class="panel-head"><h2>Loan and card applications</h2><span class="muted">A decision does not open the client wallet</span></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Client</th><th>Product</th><th>Amount</th><th>Wallet</th><th>Status</th><th></th></tr></thead>
+            <tbody id="applicationTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="grid tab-panel hidden" id="panel-wallets">
       <div class="panel">
         <div class="panel-head"><h2>Live deposit wallets</h2></div>
@@ -263,7 +276,7 @@
     function renderUsers(users) {
       $('userTableBody').innerHTML = users.map(user => `
         <tr>
-          <td>${esc(user.name)}<br><span class="muted">${esc(user.role)}</span></td>
+          <td>${esc(user.name)}<br><span class="muted">${esc(user.accountNumber || '')} · ${esc(user.role)}</span></td>
           <td>${esc(user.email)}</td>
           <td>${money(user.cash)}</td>
           <td>${statusBadge(user)}</td>
@@ -336,17 +349,46 @@
       }
     }
 
+    function renderApplications(rows) {
+      $('applicationTableBody').innerHTML = rows.length ? rows.map(item => `
+        <tr>
+          <td>${esc(item.name)}<br><span class="muted">${esc(item.accountNumber)} · ${esc(item.email)}</span></td>
+          <td>${item.product === 'credit_card' ? 'Credit card' : 'Loan'}<br><span class="muted">${esc(item.purpose || '')}</span></td>
+          <td>${money(item.amount)}</td>
+          <td class="wallet">${esc(item.network)}<br>${esc(item.wallet_address)}</td>
+          <td>${requestBadge(item.status)}</td>
+          <td>${item.status === 'Pending' ? `<div class="btn-row">
+            <button class="btn small primary" onclick="reviewApplication(${item.id}, 'approve')">Accept</button>
+            <button class="btn small danger" onclick="reviewApplication(${item.id}, 'decline')">Decline</button>
+          </div>` : ''}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="6" class="muted">No applications.</td></tr>';
+    }
+
+    async function reviewApplication(id, decision) {
+      try {
+        const note = prompt(decision === 'approve' ? 'Optional review note' : 'Reason for decline') || '';
+        await api('/api/admin/applications/' + id + '/' + decision, { method: 'POST', body: JSON.stringify({ note }) });
+        notice(decision === 'approve' ? 'Application accepted.' : 'Application declined.');
+        await loadAll();
+      } catch (error) {
+        notice(error.message, 'error');
+      }
+    }
+
     async function loadAll() {
-      const [users, funding, withdrawals, wallets] = await Promise.all([
+      const [users, funding, withdrawals, wallets, applications] = await Promise.all([
         api('/api/admin/users'),
         api('/api/admin/funding'),
         api('/api/admin/withdrawals'),
-        api('/api/admin/wallets')
+        api('/api/admin/wallets'),
+        api('/api/admin/applications')
       ]);
       renderUsers(users.users || []);
       renderRequests('fundingTableBody', funding.funding || [], 'funding');
       renderRequests('withdrawalTableBody', withdrawals.withdrawals || [], 'withdrawals');
       renderWallets(wallets.wallets || []);
+      renderApplications(applications.applications || []);
       if (selectedUserId) {
         try { await selectUser(selectedUserId); } catch (_) { selectedUserId = null; }
       }

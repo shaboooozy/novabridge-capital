@@ -62,11 +62,17 @@ const parseId = value => {
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
 };
+const accountNumber = id => {
+  const n = (Number(id) * 104729 + 48031) % 90000000 + 10000000;
+  const s = String(n);
+  return `${s.slice(0, 4)}-${s.slice(4)}`;
+};
 const mapUser = row => ({
   id: row.id,
   name: row.name,
   email: row.email,
   role: row.role,
+  accountNumber: accountNumber(row.id),
   emailVerified: Boolean(row.email_verified_at),
   email_verified_at: row.email_verified_at,
   flagged: Boolean(row.flagged),
@@ -222,6 +228,21 @@ async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS linked_wallets_user_id_idx ON linked_wallets(user_id, id DESC);
     ALTER TABLE linked_wallets ADD COLUMN IF NOT EXISTS wallet_name TEXT NOT NULL DEFAULT '';
+    CREATE TABLE IF NOT EXISTS credit_applications (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product TEXT NOT NULL,
+      amount_cents BIGINT NOT NULL,
+      purpose TEXT NOT NULL DEFAULT '',
+      network TEXT NOT NULL DEFAULT '',
+      wallet_address TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'Pending',
+      review_note TEXT,
+      reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS credit_applications_user_id_idx ON credit_applications(user_id, id DESC);
     CREATE TABLE IF NOT EXISTS deposit_wallets (
       id BIGSERIAL PRIMARY KEY,
       network TEXT NOT NULL UNIQUE,
@@ -385,7 +406,8 @@ app.post('/api/login', async (req, res) => {
       res.json({
         user: {
           id: u.id, name: u.name, email: u.email, role: u.role,
-          emailVerified: Boolean(u.email_verified_at), flagged: Boolean(u.flagged), accountStatus: u.account_status
+          emailVerified: Boolean(u.email_verified_at), flagged: Boolean(u.flagged), accountStatus: u.account_status,
+      accountNumber: accountNumber(u.id)
         }
       });
     });
@@ -461,7 +483,8 @@ app.get('/api/me', async (req, res) => {
     user: {
       id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at,
       emailVerified: Boolean(u.email_verified_at), flagged: Boolean(u.flagged),
-      flagReason: u.flag_reason || '', accountStatus: u.account_status
+      flagReason: u.flag_reason || '', accountStatus: u.account_status,
+      accountNumber: accountNumber(u.id)
     }
   });
 });
@@ -574,6 +597,32 @@ app.delete('/api/linked-wallets/:id', auth, async (req, res) => {
   if (!result.rows[0]) return res.status(404).json({ error: 'Wallet not found.' });
   await audit(req, 'wallet.unlinked', { linkedWalletId: id });
   res.json({ ok: true });
+});
+
+app.get('/api/applications', auth, async (req, res) => {
+  const result = await q('SELECT id,product,amount_cents,purpose,network,wallet_address,status,review_note,created_at FROM credit_applications WHERE user_id=$1 ORDER BY id DESC', [req.session.userId]);
+  res.json({ applications: result.rows.map(row => ({ ...row, amount: money(row.amount_cents) })) });
+});
+
+app.post('/api/applications', auth, restricted, async (req, res) => {
+  const product = req.body.product === 'credit_card' ? 'credit_card' : req.body.product === 'loan' ? 'loan' : '';
+  const amount = Number(req.body.amount);
+  const purpose = String(req.body.purpose || '').trim().slice(0, 240);
+  const walletId = parseId(req.body.walletId);
+  if (!product) return res.status(400).json({ error: 'Choose a loan or a credit card.' });
+  if (!Number.isFinite(amount) || amount < 500 || amount > 250000) return res.status(400).json({ error: 'Enter an amount from $500 to $250,000.' });
+  if (purpose.length < 3) return res.status(400).json({ error: 'Describe what the credit is for.' });
+  if (!walletId) return res.status(400).json({ error: 'Connect a wallet, then choose it on the application.' });
+  const wallet = await q('SELECT network,address,wallet_name,label FROM linked_wallets WHERE id=$1 AND user_id=$2', [walletId, req.session.userId]);
+  if (!wallet.rows[0]) return res.status(400).json({ error: 'Choose a wallet connected to this account.' });
+  const row = wallet.rows[0];
+  const saved = await q(
+    `INSERT INTO credit_applications(user_id,product,amount_cents,purpose,network,wallet_address) VALUES($1,$2,$3,$4,$5,$6)
+     RETURNING id,product,amount_cents,purpose,network,wallet_address,status,created_at`,
+    [req.session.userId, product, cents(amount), purpose, row.network, row.address]
+  );
+  await audit(req, 'credit.applied', { product, amount, network: row.network });
+  res.status(201).json({ application: { ...saved.rows[0], amount: money(saved.rows[0].amount_cents) } });
 });
 
 app.post('/api/withdrawals', auth, verified, restricted, async (req, res) => {
@@ -1006,6 +1055,30 @@ async function reviewWithdrawal(req, res, decision) {
 
 app.post('/api/admin/withdrawals/:id/approve', auth, admin, (req, res) => reviewWithdrawal(req, res, 'approve'));
 app.post('/api/admin/withdrawals/:id/decline', auth, admin, (req, res) => reviewWithdrawal(req, res, 'decline'));
+
+app.get('/api/admin/applications', auth, admin, async (req, res) => {
+  const result = await q(`
+    SELECT a.id,a.user_id,a.product,a.amount_cents,a.purpose,a.network,a.wallet_address,a.status,a.review_note,a.created_at,u.name,u.email
+    FROM credit_applications a JOIN users u ON u.id=a.user_id
+    ORDER BY a.id DESC LIMIT 100
+  `);
+  res.json({ applications: result.rows.map(row => ({ ...row, amount: money(row.amount_cents), accountNumber: accountNumber(row.user_id) })) });
+});
+
+app.post('/api/admin/applications/:id/:decision', auth, admin, async (req, res) => {
+  const id = parseId(req.params.id);
+  const decision = req.params.decision === 'approve' ? 'Approved' : req.params.decision === 'decline' ? 'Declined' : '';
+  if (!id || !decision) return res.status(400).json({ error: 'Choose a valid application.' });
+  const note = String(req.body.note || '').slice(0, 240);
+  const result = await q(
+    `UPDATE credit_applications SET status=$1, review_note=$2, reviewed_by=$3, reviewed_at=NOW()
+     WHERE id=$4 AND status='Pending' RETURNING id,user_id,product,status`,
+    [decision, note, req.session.userId, id]
+  );
+  if (!result.rows[0]) return res.status(409).json({ error: 'That application is no longer pending.' });
+  await audit(req, decision === 'Approved' ? 'credit.approved' : 'credit.declined', { applicationId: id, product: result.rows[0].product });
+  res.json({ ok: true, application: result.rows[0] });
+});
 
 app.get('/api/admin/wallets', auth, admin, async (req, res) => {
   res.json({ wallets: await listDepositWallets(false) });
