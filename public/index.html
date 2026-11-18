@@ -4,52 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EtherGrant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --night:#0b1220; --ink:#121a2b; --panel:#172033; --line:#2c3a52;
   --parchment:#f3efe6; --mist:#9aa6b8; --leaf:#3cba74; --leaf-deep:#1e7a49;
+  --amber:#e4a853;
+  --color-night:#0b1220; --color-ink:#121a2b; --color-panel:#172033; --color-line:#2c3a52;
+  --color-parchment:#f3efe6; --color-mist:#9aa6b8; --color-leaf:#3cba74; --color-leaf-deep:#1e7a49;
+  --color-amber:#e4a853;
+  --font-sans:"Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-serif:"Fraunces", Georgia, "Times New Roman", serif;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--night);color:var(--parchment);font:15px/1.55 Outfit,system-ui,sans-serif}
-h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;text-wrap:balance}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background:var(--night);color:var(--parchment)}
+body{margin:0;background:var(--night);color:var(--parchment);font:15px/1.55 var(--font-sans)}
+h1,h2,h3{font-family:var(--font-serif);font-weight:500;text-wrap:balance}
+p{text-wrap:pretty}
 a{color:inherit;text-decoration:none}
+button:not(:disabled),[role="button"]:not(:disabled){cursor:pointer}
+::selection{background:color-mix(in srgb, var(--leaf) 35%, transparent);color:var(--parchment)}
 .container{width:min(1120px,92%);margin:auto}
-.nav{height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--ink);z-index:10}
+.nav,.site-header{height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgb(11 18 32 / 0.95);z-index:40;gap:12px;padding:0 16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.site-header a{color:#f3efe6;text-decoration:none}
+.site-header nav{display:flex;align-items:center;gap:24px}
+.site-header .is-current{color:#3cba74}
 .logo{font-weight:600;letter-spacing:.08em;font-size:14px}
-.btn{border:1px solid var(--line);background:transparent;color:var(--parchment);padding:10px 16px;border-radius:999px;font-weight:500}
+.btn{border:1px solid var(--line);background:transparent;color:var(--parchment);padding:10px 16px;border-radius:999px;font-weight:500;display:inline-flex;align-items:center}
 .btn.primary{background:var(--leaf);color:var(--night);border-color:var(--leaf)}
 .hero{padding:72px 0 48px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
 .eyebrow{display:inline-flex;gap:8px;align-items:center;color:var(--leaf);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 16px;
-  border-bottom: 1px solid #2c3a52;
-  background: rgb(11 18 32 / 0.95);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.site-header a {
-  color: #f3efe6;
-  text-decoration: none;
-}
-
-.site-header nav {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.site-header .is-current {
-  color: #3cba74;
-}
 .claim-overlay{position:fixed;inset:0;background:rgba(16,32,51,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
 .claim-overlay.show{display:flex}
 .claim-modal{background:#fff;border:1px solid var(--line);border-radius:8px;padding:28px;max-width:420px;text-align:center;box-shadow:var(--shadow)}
@@ -60,39 +46,75 @@ a{color:inherit;text-decoration:none}
 .team-card div{padding:14px}
 .team-card h3{margin:0 0 4px;font-size:16px}
 .team-card p{margin:0;font-size:13px;color:var(--muted)}
+.section{padding:48px 0}
+.kicker{color:var(--leaf);font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.grove-track{animation:grove-drift 80s linear infinite}
+.grove-marquee:hover .grove-track,.grove-marquee:focus-within .grove-track{animation-play-state:paused}
+@keyframes grove-drift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.grove-track{animation:none}.grove-copy{display:none}.grove-marquee{overflow-x:auto}}
 </style>
 </head>
 <body>
 
-<header class="container nav">
+<header class="container nav site-header">
   <a class="logo" href="#">EtherGrant</a>
-  <div>
+  <nav>
     <button class="btn" onclick="document.getElementById('claimOverlay').classList.add('show')">Claim</button>
     <button class="btn primary">Get started</button>
-  </div>
+  </nav>
 </header>
 
 <main class="container">
 <section class="hero">
   <div>
-    <span class="eyebrow"><span style="width:7px;height:7px;background:var(--leaf);border-radius:50%"></span> The digital asset platform</span>
-    <h1>A private account for digital assets.</h1>
-    <p>Review the account, link a wallet you control, and move funds with written instructions. Cash posts only after a transfer is confirmed.</p>
-    <div class="hero-buttons">
-      <button class="btn primary">Review strategies</button>
-      <button class="btn">How access works</button>
+    <span class="eyebrow"><span style="width:7px;height:7px;background:var(--leaf);border-radius:50%"></span> The mission</span>
+    <h1>After a scam, or before a loan</h1>
+    <p>EtherGrant is for people in the United States and around the world who were hit by a crypto scam, or who want to understand a crypto-backed loan before they sign. You can write a report note, see what collateral actually buys, and read a grant or an airdrop without sending anything. This site does not recover stolen funds and does not lend money.</p>
+    <div class="hero-buttons" style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap">
+      <a class="btn primary" href="/help">I was scammed</a>
+      <a class="btn" href="/loans">Before a loan</a>
     </div>
   </div>
-  <div class="mock">
+  <div class="mock" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px">
     <div style="display:flex;justify-content:space-between;font-size:11px;letter-spacing:.08em;color:var(--mist)">
       <span>ACCOUNT</span><span>USD</span>
     </div>
-    <div class="balance">$0.00</div>
+    <div class="balance" style="font-size:32px;font-weight:500;margin:8px 0">$0.00</div>
     <div style="color:var(--leaf)">Available cash</div>
     <div style="margin-top:16px;font-size:14px;color:var(--mist)">
       <div style="display:flex;justify-content:space-between"><span>Positions</span><b>None</b></div>
       <div style="display:flex;justify-content:space-between;margin-top:6px"><span>Linked wallets</span><b>None</b></div>
     </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="kicker">What you can do here</div>
+  <h2 style="font-size:32px;margin:6px 0 20px">Clear next steps</h2>
+  <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+    <a href="/help" style="display:block;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px">
+      <p style="font-size:32px;color:var(--leaf);margin:0">01</p>
+      <h3 style="margin:8px 0 6px">Report a scam</h3>
+      <p style="color:var(--mist);margin:0">Write the facts, download the note, and file with IC3, the FTC, or the CFPB.</p>
+    </a>
+    <a href="/loans" style="display:block;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px">
+      <p style="font-size:32px;color:var(--leaf);margin:0">02</p>
+      <h3 style="margin:8px 0 6px">Read a loan</h3>
+      <p style="color:var(--mist);margin:0">See the collateral, the amount you could borrow, and the price that can liquidate it.</p>
+    </a>
+    <a href="/drops" style="display:block;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px">
+      <p style="font-size:32px;color:var(--leaf);margin:0">03</p>
+      <h3 style="margin:8px 0 6px">Read an offer</h3>
+      <p style="color:var(--mist);margin:0">Grants and airdrops stay unconfirmed until the note says otherwise. No wallet.</p>
+    </a>
+  </div>
+</section>
+
+<section class="section" id="vision">
+  <h2 style="font-size:32px;margin:0 0 16px">Give a clear answer back</h2>
+  <div style="max-width:720px;font-size:17px;line-height:1.6">
+    <p>People keep meeting the same two pitches: someone will recover what a scam took, or someone will open a crypto-backed loan if you pay first. EtherGrant answers both with the step you can actually take.</p>
+    <p>A report goes to the offices that take them. A loan is collateral, a rate, and a price where that collateral can be sold. Awareness is being able to tell those apart. This page does not move funds and does not speak for any agency or foundation.</p>
   </div>
 </section>
 
