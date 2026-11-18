@@ -20,25 +20,36 @@ a{color:inherit;text-decoration:none}
 .btn.primary{background:var(--leaf);color:var(--night);border-color:var(--leaf)}
 .hero{padding:72px 0 48px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
 .eyebrow{display:inline-flex;gap:8px;align-items:center;color:var(--leaf);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
-h1{font-size:clamp(36px,5vw,56px);line-height:1.05;margin:16px 0}
-.hero p{color:var(--mist);max-width:560px;font-size:17px}
-.hero-buttons{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
-.mock{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px}
-.balance{font-size:40px;font-family:Fraunces,serif;margin:12px 0}
-.section{padding:56px 0}
-.kicker{color:var(--leaf);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
-.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
-.team-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.team-card img{width:100%;height:220px;object-fit:cover;object-position:top}
-.team-card div{padding:14px}
-.claim-overlay{position:fixed;inset:0;background:rgba(11,18,32,.8);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
-.claim-overlay.show{display:flex}
-.claim-modal{background:var(--ink);border:1px solid var(--leaf);border-radius:24px;padding:28px;max-width:420px;text-align:center;box-shadow:0 0 40px rgba(60,186,116,.3)}
-footer{border-top:1px solid var(--line);padding:32px 0;color:var(--mist);font-size:13px}
-@media(max-width:800px){.hero{grid-template-columns:1fr}}
-</style>
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid #2c3a52;
+  background: rgb(11 18 32 / 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.site-header a {
+  color: #f3efe6;
+  text-decoration: none;
+}
+
+.site-header nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.site-header .is-current {
+  color: #3cba74;
+}
 </head>
 <body>
 
