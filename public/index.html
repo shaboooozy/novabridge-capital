@@ -86,7 +86,8 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-si
 .modal input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--ink);color:var(--parchment);font:inherit}
 .modal .btn{width:100%;margin-top:16px;justify-content:center}
 .modal-msg{margin-top:12px;font-size:13px;color:var(--leaf)}
-.toast{position:fixed;bottom:20px;right:20px;background:var(--leaf);color:var(--night);padding:12px 20px;border-radius:8px;z-index:200;animation:fade 2.5s}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--leaf);color:var(--night);padding:12px 20px;border-radius:8px;z-index:200}
+.error-toast{background:#ff6b6b;color:white}
 
 @media (max-width:900px){
   .hero-inner{grid-template-columns:1fr;gap:40px;padding:60px 0}
@@ -136,6 +137,7 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-si
         <tr><td colspan="4" style="color:var(--mist)">Log in to see your activity.</td></tr>
       </tbody>
     </table>
+    <div id="debug" style="margin-top:12px;font-size:12px;color:var(--mist)"></div>
   </div>
 </section>
 
@@ -206,34 +208,41 @@ function openModal(type){
   back.classList.add('show');
 }
 function closeModal(){ document.getElementById('modalBack').classList.remove('show'); }
-function toast(m){
+function toast(m, isError){
   const t = document.createElement('div');
-  t.className = 'toast';
+  t.className = 'toast' + (isError ? ' error-toast' : '');
   t.textContent = m;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
+  setTimeout(() => t.remove(), 3500);
+}
+function debug(msg){
+  const el = document.getElementById('debug');
+  if(el) el.textContent = msg;
 }
 async function api(url, opt={}){
   const r = await fetch(url, {credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opt});
   const d = await r.json().catch(()=>({}));
-  if(!r.ok) throw Error(d.error || 'Request failed');
+  if(!r.ok) throw Error(d.error || 'Request failed (' + r.status + ')');
   return d;
 }
 async function register(){
   try{
-    const d = await api('/api/register', {method:'POST', body:JSON.stringify({
+    await api('/api/register', {method:'POST', body:JSON.stringify({
       name: document.getElementById('signupName').value,
       email: document.getElementById('signupEmail').value,
       password: document.getElementById('signupPassword').value
     })});
     document.getElementById('modalMsg').textContent = 'Account created. Check your email to verify.';
     toast('Account created');
-    setTimeout(() => { closeModal(); loadDashboard(); }, 1000);
-  }catch(e){ document.getElementById('modalMsg').textContent = e.message; }
+    setTimeout(() => { closeModal(); loadDashboard(); }, 800);
+  }catch(e){ 
+    document.getElementById('modalMsg').textContent = e.message;
+    toast(e.message, true);
+  }
 }
 async function login(){
   try{
-    const d = await api('/api/login', {method:'POST', body:JSON.stringify({
+    await api('/api/login', {method:'POST', body:JSON.stringify({
       email: document.getElementById('loginEmail').value,
       password: document.getElementById('loginPassword').value
     })});
@@ -241,31 +250,41 @@ async function login(){
     toast('Welcome back');
     closeModal();
     await loadDashboard();
-  }catch(e){ document.getElementById('modalMsg').textContent = e.message; }
+  }catch(e){ 
+    document.getElementById('modalMsg').textContent = e.message;
+    toast(e.message, true);
+  }
 }
 async function loadDashboard(){
   try{
     const d = await api('/api/dashboard');
-    document.getElementById('displayBalance').textContent = money(d.portfolio?.cash || 0);
+    const cash = d.portfolio?.cash ?? 0;
+    document.getElementById('displayBalance').textContent = money(cash);
     const body = document.getElementById('activityBody');
     if(d.activities && d.activities.length){
-      body.innerHTML = d.activities.map(a => `<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join('');
+      body.innerHTML = d.activities.map(a => 
+        `<tr><td>${esc(a.activity||'')}</td><td>${esc(a.type||'')}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status||'')}</span></td></tr>`
+      ).join('');
     } else {
       body.innerHTML = '<tr><td colspan="4" style="color:var(--mist)">No activity yet.</td></tr>';
     }
-  }catch(_){
-    // not logged in or error
+    debug('Dashboard loaded');
+  }catch(e){
+    debug('Dashboard error: ' + e.message);
+    toast('Dashboard: ' + e.message, true);
   }
 }
 // Check session on load
 (async () => {
   try{
     const me = await fetch('/api/me', {credentials:'same-origin'}).then(r => r.ok ? r.json() : null);
-    if(me && me.user){
-      document.getElementById('displayBalance').textContent = money(me.user.cash || 0);
+    if(me && me.authenticated && me.user){
+      debug('Session found: ' + me.user.email);
       await loadDashboard();
+    } else {
+      debug('Not logged in');
     }
-  }catch(_){}
+  }catch(e){ debug('Session check failed: ' + e.message); }
 })();
 if (!sessionStorage.getItem("claim-seen")) {
   setTimeout(openClaim, 1200);
