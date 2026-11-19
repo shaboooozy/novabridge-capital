@@ -58,9 +58,14 @@ header.site-header{
 .cash{color:var(--leaf);font-size:14px}
 .mock-row{display:flex;justify-content:space-between;margin-top:8px;font-size:14px;color:var(--mist)}
 
-.section{padding:100px 0}
+.section{padding:80px 0}
 .kicker{color:var(--leaf);font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
 .section h2{font-size:clamp(32px,4vw,48px);margin:8px 0 32px}
+
+.activity-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.activity-table th,.activity-table td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--line)}
+.activity-table th{color:var(--mist);font-size:12px;text-transform:uppercase}
+.badge{font-size:11px;border-radius:999px;padding:4px 8px;background:#163022;color:#9be4b6}
 
 .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
 .team-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:transform .2s}
@@ -81,6 +86,7 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-si
 .modal input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--ink);color:var(--parchment);font:inherit}
 .modal .btn{width:100%;margin-top:16px;justify-content:center}
 .modal-msg{margin-top:12px;font-size:13px;color:var(--leaf)}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--leaf);color:var(--night);padding:12px 20px;border-radius:8px;z-index:200;animation:fade 2.5s}
 
 @media (max-width:900px){
   .hero-inner{grid-template-columns:1fr;gap:40px;padding:60px 0}
@@ -94,8 +100,8 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-si
   <a class="logo" href="#">ETHER<span>GRANT</span></a>
   <div class="nav-btns">
     <button class="btn" onclick="openClaim()">Claim</button>
-    <button class="btn" onclick="openModal('login')">Log in</button>
-    <button class="btn primary" onclick="openModal('signup')">Get started</button>
+    <button class="btn" id="loginBtn" onclick="openModal('login')">Log in</button>
+    <button class="btn primary" id="signupBtn" onclick="openModal('signup')">Get started</button>
   </div>
 </header>
 
@@ -107,7 +113,7 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-si
       <p class="lead">Own, hold, and move what is yours. No middlemen. Multi-chain. Built for people who understand that the future of money is self-custody and open protocols.</p>
       <div class="hero-buttons">
         <button class="btn primary" onclick="openModal('signup')">Open an account</button>
-        <button class="btn" onclick="document.getElementById('team').scrollIntoView({behavior:'smooth'})">Meet the team</button>
+        <button class="btn" onclick="document.getElementById('activity').scrollIntoView({behavior:'smooth'})">View activity</button>
       </div>
     </div>
     <div class="mock">
@@ -117,6 +123,19 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-si
       <div class="mock-row"><span>Positions</span><b>None</b></div>
       <div class="mock-row"><span>Linked wallets</span><b>None</b></div>
     </div>
+  </div>
+</section>
+
+<section class="section" id="activity">
+  <div class="container">
+    <div class="kicker">Dashboard</div>
+    <h2>Recent activity</h2>
+    <table class="activity-table">
+      <thead><tr><th>Activity</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody id="activityBody">
+        <tr><td colspan="4" style="color:var(--mist)">Log in to see your activity.</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
 
@@ -149,12 +168,13 @@ footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mist);font-si
 </div>
 
 <div class="modal-back" id="modalBack">
-  <div class="modal" id="modalContent">
-    <!-- filled by JS -->
-  </div>
+  <div class="modal" id="modalContent"></div>
 </div>
 
 <script>
+const money = n => '$' + Number(n || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));
+
 function openClaim(){ document.getElementById('claimOverlay').classList.add('show'); }
 function openModal(type){
   const modal = document.getElementById('modalContent');
@@ -186,6 +206,13 @@ function openModal(type){
   back.classList.add('show');
 }
 function closeModal(){ document.getElementById('modalBack').classList.remove('show'); }
+function toast(m){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = m;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
 async function api(url, opt={}){
   const r = await fetch(url, {credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opt});
   const d = await r.json().catch(()=>({}));
@@ -200,7 +227,8 @@ async function register(){
       password: document.getElementById('signupPassword').value
     })});
     document.getElementById('modalMsg').textContent = 'Account created. Check your email to verify.';
-    setTimeout(closeModal, 1500);
+    toast('Account created');
+    setTimeout(() => { closeModal(); loadDashboard(); }, 1000);
   }catch(e){ document.getElementById('modalMsg').textContent = e.message; }
 }
 async function login(){
@@ -210,15 +238,32 @@ async function login(){
       password: document.getElementById('loginPassword').value
     })});
     document.getElementById('modalMsg').textContent = 'Welcome back.';
-    setTimeout(()=>{ closeModal(); location.reload(); }, 800);
+    toast('Welcome back');
+    closeModal();
+    await loadDashboard();
   }catch(e){ document.getElementById('modalMsg').textContent = e.message; }
 }
-// optional: load session balance if logged in
-(async ()=>{
+async function loadDashboard(){
   try{
-    const me = await fetch('/api/me', {credentials:'same-origin'}).then(r=>r.ok?r.json():null);
+    const d = await api('/api/dashboard');
+    document.getElementById('displayBalance').textContent = money(d.portfolio?.cash || 0);
+    const body = document.getElementById('activityBody');
+    if(d.activities && d.activities.length){
+      body.innerHTML = d.activities.map(a => `<tr><td>${esc(a.activity)}</td><td>${esc(a.type)}</td><td>${money(a.amount)}</td><td><span class="badge">${esc(a.status)}</span></td></tr>`).join('');
+    } else {
+      body.innerHTML = '<tr><td colspan="4" style="color:var(--mist)">No activity yet.</td></tr>';
+    }
+  }catch(_){
+    // not logged in or error
+  }
+}
+// Check session on load
+(async () => {
+  try{
+    const me = await fetch('/api/me', {credentials:'same-origin'}).then(r => r.ok ? r.json() : null);
     if(me && me.user){
-      document.getElementById('displayBalance').textContent = '$' + (me.user.cash || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      document.getElementById('displayBalance').textContent = money(me.user.cash || 0);
+      await loadDashboard();
     }
   }catch(_){}
 })();
