@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaBridge</title>
+  <style>
+    :root {
+      --bg: #0a1211;
+      --panel: #101d1b;
+      --stroke: rgba(255,255,255,0.08);
+      --text: #edf6f3;
+      --muted: #a9c2ba;
+      --brand: #7ee0b8;
+      --danger: #ffb4b4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0a1211;
+      color: var(--text);
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 80px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--stroke); }
+    .brand { font-weight: 700; letter-spacing: 0.16em; }
+    .actions, .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    a { color: var(--brand); }
+    .btn {
+      border: 1px solid var(--stroke); border-radius: 12px; padding: 11px 14px; color: var(--text);
+      background: rgba(255,255,255,0.02); cursor: pointer; font-weight: 700; min-height: 44px;
+      text-decoration: none; display: inline-flex; align-items: center;
+    }
+    .btn.primary { background: #183f34; border-color: rgba(126,224,184,0.4); }
+    .panel { margin-top: 22px; background: rgba(16,29,27,0.9); border: 1px solid var(--stroke); border-radius: 18px; padding: 18px; }
+    h1, h2 { margin: 0 0 8px; }
+    .muted { color: var(--muted); line-height: 1.5; }
+    form, .stack { display: grid; gap: 12px; }
+    label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); display: block; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 12px 13px; border-radius: 10px; border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.02); color: var(--text); font-size: 1rem; min-height: 44px;
+    }
+    .tabs { display: flex; gap: 8px; margin: 8px 0 4px; }
+    .tab { border: 1px solid var(--stroke); background: transparent; color: var(--muted); border-radius: 999px; padding: 9px 14px; cursor: pointer; font-weight: 700; min-height: 44px; }
+    .tab.active { color: var(--text); border-color: rgba(126,224,184,0.45); }
+    .notice { border: 1px solid rgba(126,224,184,0.25); border-radius: 12px; padding: 12px 14px; color: #baf8db; }
+    .notice.error { border-color: rgba(255,180,180,0.35); color: var(--danger); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+    .stat { border: 1px solid var(--stroke); border-radius: 14px; padding: 12px; }
+    .stat b { display: block; font-size: 1.25rem; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--stroke); font-size: 0.92rem; vertical-align: top; }
+    th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .hidden { display: none; }
+    @media (max-width: 720px) {
+      .stats { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+      .wrap { padding: 16px 12px 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">NOVABRIDGE</div>
+      <div class="actions">
+        <a class="btn" href="/">Back</a>
+        <a class="btn hidden" id="adminLink" href="/admin.html">Admin</a>
+        <button class="btn hidden" id="logoutBtn" type="button">Log out</button>
+      </div>
+    </header>
+
+    <section class="panel" id="gate">
+      <h1>Sign in</h1>
+      <p class="muted">This uses the account already on this server. A funding request stays pending until the backend settles it.</p>
+      <div class="tabs">
+        <button class="tab active" id="tabLogin" type="button">Sign in</button>
+        <button class="tab" id="tabRegister" type="button">Create account</button>
+      </div>
+      <form id="loginForm">
+        <div><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+        <div><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" minlength="8" required></div>
+        <button class="btn primary" type="submit">Sign in</button>
+      </form>
+      <form id="registerForm" class="hidden">
+        <div><label for="regName">Name</label><input id="regName" autocomplete="name" required></div>
+        <div><label for="regEmail">Email</label><input id="regEmail" type="email" autocomplete="username" required></div>
+        <div><label for="regPassword">Password</label><input id="regPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+        <button class="btn primary" type="submit">Create account</button>
+      </form>
+      <p class="notice error hidden" id="gateError"></p>
+    </section>
+
+    <section id="account" class="hidden">
+      <div class="panel">
+        <h1 id="hello">Account</h1>
+        <p class="muted" id="who"></p>
+        <div class="stats">
+          <div class="stat"><span class="muted">Cash</span><b id="cash">—</b></div>
+          <div class="stat"><span class="muted">Available</span><b id="available">—</b></div>
+          <div class="stat"><span class="muted">Pending withdrawal</span><b id="pending">—</b></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Recent activity</h2>
+        <div id="activity"></div>
+      </div>
+    </section>
+  </div>
+  <script>
+    const $ = id => document.getElementById(id);
+    async function api(url, opt = {}) {
+      const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opt
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+    function money(n) {
+      return Number(n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    }
+    function showError(message) {
+      const el = $('gateError');
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+    $('tabLogin').onclick = () => {
+      $('tabLogin').classList.add('active');
+      $('tabRegister').classList.remove('active');
+      $('loginForm').classList.remove('hidden');
+      $('registerForm').classList.add('hidden');
+    };
+    $('tabRegister').onclick = () => {
+      $('tabRegister').classList.add('active');
+      $('tabLogin').classList.remove('active');
+      $('registerForm').classList.remove('hidden');
+      $('loginForm').classList.add('hidden');
+    };
+    async function openAccount() {
+      const me = await api('/api/me');
+      if (!me.authenticated) return;
+      const dash = await api('/api/dashboard');
+      $('gate').classList.add('hidden');
+      $('account').classList.remove('hidden');
+      $('logoutBtn').classList.remove('hidden');
+      if (me.user.role === 'admin') $('adminLink').classList.remove('hidden');
+      $('hello').textContent = me.user.name;
+      $('who').textContent = me.user.email + ' · ' + me.user.accountNumber + (me.user.emailVerified ? '' : ' · email not verified');
+      $('cash').textContent = money(dash.portfolio.cash);
+      $('available').textContent = money(dash.portfolio.available);
+      $('pending').textContent = money(dash.portfolio.pendingWithdrawal);
+      const rows = dash.activities || [];
+      $('activity').innerHTML = rows.length ? '<table><thead><tr><th>Activity</th><th>Status</th><th>Amount</th></tr></thead><tbody>' + rows.map(item => '<tr><td>' + String(item.activity).replace(/[&<>]/g, c => ({'&':'&','<':'<','>':'>'}[c])) + '</td><td>' + String(item.status).replace(/[&<>]/g, c => ({'&':'&','<':'<','>':'>'}[c])) + '</td><td>' + money(item.amount) + '</td></tr>').join('') + '</tbody></table>' : '<p class="muted">No activity yet.</p>';
+    }
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('gateError').classList.add('hidden');
+      try {
+        await api('/api/login', { method: 'POST', body: JSON.stringify({ email: $('loginEmail').value, password: $('loginPassword').value }) });
+        await openAccount();
+      } catch (err) { showError(err.message); }
+    });
+    $('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('gateError').classList.add('hidden');
+      try {
+        await api('/api/register', { method: 'POST', body: JSON.stringify({ name: $('regName').value, email: $('regEmail').value, password: $('regPassword').value }) });
+        await openAccount();
+      } catch (err) { showError(err.message); }
+    });
+    $('logoutBtn').addEventListener('click', async () => {
+      try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
+      location.href = '/dashboard/apps';
+    });
+    openAccount().catch(() => {});
+  </script>
+</body>
+</html>

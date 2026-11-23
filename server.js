@@ -9,6 +9,7 @@ const nacl = require('tweetnacl');
 const bs58 = require('bs58');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -1311,9 +1312,24 @@ app.put('/api/admin/wallets/:network', auth, admin, async (req, res) => {
   res.json({ ok: true, wallet: result.rows[0] });
 });
 
+function sendLanding(req, res) {
+  const origin = `${req.protocol}://${req.get('host')}`;
+  let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+  html = html.replaceAll('href="/dashboard/apps"', `href="${origin}/dashboard/apps"`);
+  const bridge = `<script>(function(){document.addEventListener('click',function(e){var t=e.target&&e.target.closest&&e.target.closest('a');if(!t)return;var h=t.getAttribute('href')||'';if(h==='/dashboard/apps'||h.endsWith('/dashboard/apps')){e.preventDefault();e.stopPropagation();location.assign(location.origin+'/dashboard/apps');}},true);})();</script>`;
+  html = html.replace(/<body([^>]*)>/i, `<body$1>${bridge}`);
+  res.set('Cache-Control', 'no-store');
+  res.type('html').send(html);
+}
+
 app.get('/admin.html', auth, admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/dashboard/apps', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+app.get(['/', '/index.html', '/indexx.html', '/indexxX.html'], sendLanding);
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  sendLanding(req, res);
+});
 
 module.exports = app;
 
