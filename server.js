@@ -250,6 +250,24 @@ async function initDb() {
     ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_address TEXT NOT NULL DEFAULT '';
     ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_status TEXT NOT NULL DEFAULT 'Awaiting';
     ALTER TABLE credit_applications ADD COLUMN IF NOT EXISTS collateral_tx TEXT NOT NULL DEFAULT '';
+    CREATE UNIQUE INDEX IF NOT EXISTS credit_applications_collateral_tx_uidx
+      ON credit_applications (lower(collateral_tx))
+      WHERE collateral_tx <> '';
+    ALTER TABLE funding_requests ADD COLUMN IF NOT EXISTS settlement_reference TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS funding_requests_settlement_ref_idx
+      ON funding_requests(settlement_reference)
+      WHERE settlement_reference IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS allocations (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      amount_cents BIGINT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending',
+      activity_id BIGINT REFERENCES activities(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      settled_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS allocations_user_id_idx ON allocations(user_id, id DESC);
     CREATE TABLE IF NOT EXISTS deposit_wallets (
       id BIGSERIAL PRIMARY KEY,
       network TEXT NOT NULL UNIQUE,
@@ -309,9 +327,18 @@ function auth(req, res, next) {
   next();
 }
 
-function admin(req, res, next) {
-  if (!req.session.userId || req.session.role !== 'admin') return res.status(403).json({ error: 'Administrator access required' });
-  next();
+async function admin(req, res, next) {
+  if (!req.session.userId) return res.status(403).json({ error: 'Administrator access required' });
+  try {
+    const result = await q('SELECT role FROM users WHERE id=$1', [req.session.userId]);
+    const role = result.rows[0]?.role;
+    if (role !== 'admin') return res.status(403).json({ error: 'Administrator access required' });
+    req.session.role = role;
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Administrator access could not be verified.' });
+  }
 }
 
 async function verified(req, res, next) {
@@ -485,6 +512,7 @@ app.get('/api/me', async (req, res) => {
   const r = await q('SELECT id,name,email,role,email_verified_at,flagged,flag_reason,account_status,created_at FROM users WHERE id=$1', [req.session.userId]);
   if (!r.rows[0]) return res.status(401).json({ error: 'Account not found.' });
   const u = r.rows[0];
+  req.session.role = u.role;
   res.json({
     authenticated: true,
     user: {
@@ -664,33 +692,179 @@ app.post('/api/applications', auth, restricted, async (req, res) => {
 app.post('/api/applications/:id/collateral', auth, async (req, res) => {
   const id = parseId(req.params.id);
   const tx = String(req.body.tx || '').trim().slice(0, 120);
-  if (!id || tx.length < 6) return res.status(400).json({ error: 'Enter the transfer id from the wallet.' });
+  if (!id || !tx) return res.status(400).json({ error: 'Enter the transfer id from the wallet.' });
   const existing = await q('SELECT * FROM credit_applications WHERE id=$1 AND user_id=$2', [id, req.session.userId]);
   const item = existing.rows[0];
   if (!item) return res.status(404).json({ error: 'Application not found.' });
   if (item.status !== 'Pending') return res.status(409).json({ error: 'This application is no longer pending.' });
-  let status = 'Sent';
-  if (item.network === 'ethereum' && item.collateral_symbol === 'ETH' && /^0x[a-fA-F0-9]{64}$/.test(tx)) {
-    try {
+  const dup = await q(
+    `SELECT id FROM credit_applications
+     WHERE collateral_tx <> '' AND lower(collateral_tx)=lower($1) AND id <> $2`,
+    [tx, id]
+  );
+  if (dup.rows[0]) return res.status(409).json({ error: 'That transfer is already attached to another application.' });
+  let checked;
+  try {
+    checked = await verifyCollateralOnChain(item, tx);
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ error: 'The transfer could not be checked yet. Try again after it confirms.' });
+  }
+  if (!checked.ok) return res.status(400).json({ error: checked.error });
+  try {
+    const saved = await q(
+      `UPDATE credit_applications SET collateral_tx=$1, collateral_status=$2 WHERE id=$3
+       RETURNING id,product,amount_cents,purpose,network,wallet_address,status,created_at,collateral_amount,collateral_symbol,collateral_usd_cents,collateral_address,collateral_status,collateral_tx`,
+      [tx, checked.status, id]
+    );
+    await audit(req, 'credit.collateral_sent', { applicationId: id, status: checked.status, tx });
+    res.json({ ok: true, status: checked.status, application: applicationView(saved.rows[0]) });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'That transfer is already attached to another application.' });
+    console.error(err);
+    res.status(500).json({ error: 'The collateral transfer could not be saved.' });
+  }
+});
+
+function topicAddress(addr) {
+  return '0x' + String(addr || '').toLowerCase().replace(/^0x/, '').padStart(64, '0');
+}
+
+const ERC20_COLLATERAL = {
+  USDT: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
+  USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
+  DAI: { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 }
+};
+const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+async function verifyCollateralOnChain(item, tx) {
+  const network = item.network;
+  const symbol = item.collateral_symbol;
+  const expected = Number(item.collateral_amount);
+  const from = item.wallet_address;
+  const to = item.collateral_address;
+  if (!Number.isFinite(expected) || expected <= 0) return { ok: false, error: 'The pledged amount is not valid.' };
+
+  if (network === 'ethereum') {
+    if (!/^0x[a-fA-F0-9]{64}$/.test(tx)) return { ok: false, error: 'Enter the Ethereum transaction hash.' };
+    if (symbol === 'ETH') {
       const sent = await ethRpc('eth_getTransactionByHash', [tx]);
       const receipt = await ethRpc('eth_getTransactionReceipt', [tx]);
-      if (!sent || !sent.from || sent.from.toLowerCase() !== item.wallet_address.toLowerCase()) return res.status(400).json({ error: 'That transfer was not sent from the linked wallet.' });
-      if (!sent.to || sent.to.toLowerCase() !== item.collateral_address.toLowerCase()) return res.status(400).json({ error: 'That transfer was not sent to the collateral address.' });
-      const got = units(sent.value, 18);
-      if (got < Number(item.collateral_amount) * 0.99) return res.status(400).json({ error: 'That transfer is smaller than the pledged amount.' });
-      if (receipt && receipt.status === '0x1') status = 'Received';
-    } catch (_) {
-      return res.status(400).json({ error: 'The transfer could not be checked yet. Try again after it confirms.' });
+      if (!sent || !sent.from || sent.from.toLowerCase() !== String(from).toLowerCase()) return { ok: false, error: 'That transfer was not sent from the linked wallet.' };
+      if (!sent.to || sent.to.toLowerCase() !== String(to).toLowerCase()) return { ok: false, error: 'That transfer was not sent to the collateral address.' };
+      if (units(sent.value, 18) < expected * 0.99) return { ok: false, error: 'That transfer is smaller than the pledged amount.' };
+      return { ok: true, status: receipt && receipt.status === '0x1' ? 'Received' : 'Sent' };
     }
+    const token = ERC20_COLLATERAL[symbol];
+    if (!token) return { ok: false, error: 'That collateral asset cannot be verified on-chain.' };
+    const receipt = await ethRpc('eth_getTransactionReceipt', [tx]);
+    if (!receipt) return { ok: false, error: 'That transfer is not on Ethereum yet.' };
+    const fromTopic = topicAddress(from);
+    const toTopic = topicAddress(to);
+    let moved = 0n;
+    for (const log of receipt.logs || []) {
+      if (String(log.address || '').toLowerCase() !== token.address.toLowerCase()) continue;
+      const topics = log.topics || [];
+      if (String(topics[0] || '').toLowerCase() !== TRANSFER_TOPIC) continue;
+      if (String(topics[1] || '').toLowerCase() !== fromTopic) continue;
+      if (String(topics[2] || '').toLowerCase() !== toTopic) continue;
+      try { moved += BigInt(log.data); } catch (_) {}
+    }
+    if (units(moved.toString(), token.decimals) < expected * 0.99) {
+      return { ok: false, error: 'That transfer was not sent from the linked wallet to the collateral address, or it is smaller than the pledged amount.' };
+    }
+    return { ok: true, status: receipt.status === '0x1' ? 'Received' : 'Sent' };
   }
-  const saved = await q(
-    `UPDATE credit_applications SET collateral_tx=$1, collateral_status=$2 WHERE id=$3
-     RETURNING id,product,amount_cents,purpose,network,wallet_address,status,created_at,collateral_amount,collateral_symbol,collateral_usd_cents,collateral_address,collateral_status,collateral_tx`,
-    [tx, status, id]
-  );
-  await audit(req, 'credit.collateral_sent', { applicationId: id, status, tx });
-  res.json({ ok: true, status, application: applicationView(saved.rows[0]) });
-});
+
+  if (network === 'bitcoin') {
+    if (!/^[a-fA-F0-9]{64}$/.test(tx)) return { ok: false, error: 'Enter the Bitcoin transaction id.' };
+    const body = await fetchJson(`https://blockstream.info/api/tx/${encodeURIComponent(tx)}`);
+    const spentFrom = (body.vin || []).some(vin => vin.prevout && vin.prevout.scriptpubkey_address === from);
+    if (!spentFrom) return { ok: false, error: 'That transfer was not sent from the linked wallet.' };
+    let sats = 0;
+    for (const vout of body.vout || []) {
+      if (vout.scriptpubkey_address === to) sats += Number(vout.value || 0);
+    }
+    if (sats / 1e8 < expected * 0.99) return { ok: false, error: 'That transfer was not sent to the collateral address or is smaller than the pledged amount.' };
+    return { ok: true, status: body.status && body.status.confirmed ? 'Received' : 'Sent' };
+  }
+
+  if (network === 'solana') {
+    if (!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(tx)) return { ok: false, error: 'Enter the Solana transaction signature.' };
+    const body = await rpc('https://api.mainnet-beta.solana.com', 'getTransaction', [tx, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]);
+    if (!body || !body.meta) return { ok: false, error: 'That transfer is not on Solana yet.' };
+    if (symbol === 'SOL') {
+      const instructions = [
+        ...((body.transaction && body.transaction.message && body.transaction.message.instructions) || []),
+        ...((body.meta.innerInstructions) || []).flatMap(group => group.instructions || [])
+      ];
+      let lamports = 0;
+      for (const ix of instructions) {
+        const info = ix.parsed && ix.parsed.info;
+        if (ix.parsed && ix.parsed.type === 'transfer' && info && info.source === from && info.destination === to) {
+          lamports += Number(info.lamports || 0);
+        }
+      }
+      if (lamports / 1e9 < expected * 0.99) return { ok: false, error: 'That transfer was not sent from the linked wallet to the collateral address, or it is smaller than the pledged amount.' };
+    } else if (symbol === 'USDC') {
+      const mint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+      const sum = (rows, owner) => (rows || []).filter(b => b.mint === mint && b.owner === owner).reduce((total, b) => total + Number(b.uiTokenAmount && b.uiTokenAmount.uiAmount || 0), 0);
+      const received = sum(body.meta.postTokenBalances, to) - sum(body.meta.preTokenBalances, to);
+      const sent = sum(body.meta.preTokenBalances, from) - sum(body.meta.postTokenBalances, from);
+      if (received < expected * 0.99 || sent < expected * 0.99) {
+        return { ok: false, error: 'That transfer was not sent from the linked wallet to the collateral address, or it is smaller than the pledged amount.' };
+      }
+    } else {
+      return { ok: false, error: 'That collateral asset cannot be verified on-chain.' };
+    }
+    return { ok: true, status: body.meta.err == null ? 'Received' : 'Sent' };
+  }
+
+  if (network === 'xrp') {
+    if (!/^[A-F0-9]{64}$/i.test(tx)) return { ok: false, error: 'Enter the XRP transaction hash.' };
+    const data = await fetchJson('https://s1.ripple.com:51234/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ method: 'tx', params: [{ transaction: tx, binary: false }] })
+    });
+    const t = data.result || {};
+    if (t.Account !== from) return { ok: false, error: 'That transfer was not sent from the linked wallet.' };
+    if (t.Destination !== to) return { ok: false, error: 'That transfer was not sent to the collateral address.' };
+    const drops = typeof t.Amount === 'string' ? Number(t.Amount) : 0;
+    if (drops / 1e6 < expected * 0.99) return { ok: false, error: 'That transfer is smaller than the pledged amount.' };
+    const success = Boolean(t.validated && t.meta && t.meta.TransactionResult === 'tesSUCCESS');
+    return { ok: true, status: success ? 'Received' : 'Sent' };
+  }
+
+  if (network === 'stellar') {
+    if (!/^[a-fA-F0-9]{64}$/.test(tx)) return { ok: false, error: 'Enter the Stellar transaction hash.' };
+    const ops = await fetchJson(`https://horizon.stellar.org/transactions/${encodeURIComponent(tx)}/operations`);
+    const records = (ops._embedded && ops._embedded.records) || [];
+    const pay = records.find(record => (record.type === 'payment' || record.type === 'create_account') && record.from === from && (record.to === to || record.account === to));
+    if (!pay) return { ok: false, error: 'That transfer was not sent from the linked wallet to the collateral address.' };
+    const got = Number(pay.amount || pay.starting_balance || 0);
+    if (got < expected * 0.99) return { ok: false, error: 'That transfer is smaller than the pledged amount.' };
+    if (symbol === 'XLM' && pay.asset_type && pay.asset_type !== 'native') return { ok: false, error: 'That transfer is not native XLM.' };
+    return { ok: true, status: pay.transaction_successful === false ? 'Sent' : 'Received' };
+  }
+
+  if (network === 'zcash') {
+    if (!/^[a-fA-F0-9]{64}$/.test(tx)) return { ok: false, error: 'Enter the Zcash transaction id.' };
+    const data = await fetchJson(`https://api.blockchair.com/zcash/dashboards/transaction/${encodeURIComponent(tx)}`);
+    const entry = data.data && data.data[tx];
+    if (!entry) return { ok: false, error: 'That transfer is not on Zcash yet.' };
+    const spentFrom = (entry.inputs || []).some(input => input.recipient === from);
+    if (!spentFrom) return { ok: false, error: 'That transfer was not sent from the linked wallet.' };
+    let zat = 0;
+    for (const output of entry.outputs || []) {
+      if (output.recipient === to) zat += Number(output.value || 0);
+    }
+    if (zat / 1e8 < expected * 0.99) return { ok: false, error: 'That transfer was not sent to the collateral address or is smaller than the pledged amount.' };
+    return { ok: true, status: entry.transaction && entry.transaction.block_id ? 'Received' : 'Sent' };
+  }
+
+  return { ok: false, error: 'Collateral on this network could not be verified on-chain.' };
+}
 
 app.post('/api/withdrawals', auth, verified, restricted, async (req, res) => {
   const network = String(req.body.network || '').toLowerCase();
@@ -843,20 +1017,84 @@ app.post('/api/funding-request', auth, restricted, async (req, res) => {
 app.post('/api/webhooks/funding', async (req, res) => {
   const secret = req.get('x-webhook-secret');
   if (!process.env.FUNDING_WEBHOOK_SECRET || secret !== process.env.FUNDING_WEBHOOK_SECRET) return res.status(401).json({ error: 'Unauthorized' });
-  const { userId, amount, reference } = req.body;
+  const { userId, amount, reference, fundingRequestId } = req.body;
   const n = Number(amount);
-  if (!Number.isInteger(Number(userId)) || !Number.isFinite(n) || n <= 0 || !reference) return res.status(400).json({ error: 'Invalid funding event.' });
+  const uid = Number(userId);
+  if (!Number.isInteger(uid) || uid <= 0 || !Number.isFinite(n) || n <= 0 || !reference) return res.status(400).json({ error: 'Invalid funding event.' });
+  const ref = String(reference).trim().slice(0, 160);
+  if (!ref) return res.status(400).json({ error: 'Invalid funding event.' });
   const c = cents(n);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const exists = await client.query('SELECT id FROM activities WHERE activity=$1 LIMIT 1', [`Funding ${reference}`]);
-    if (exists.rows[0]) { await client.query('ROLLBACK'); return res.json({ ok: true, duplicate: true }); }
-    await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [c, userId]);
-    await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [userId, `Funding ${reference}`, 'Funding', c, 'Completed']);
+    const already = await client.query(
+      'SELECT id, status FROM funding_requests WHERE settlement_reference=$1',
+      [ref]
+    );
+    if (already.rows[0]) { await client.query('ROLLBACK'); return res.json({ ok: true, duplicate: true }); }
+    const priorActivity = await client.query('SELECT id FROM activities WHERE activity=$1 LIMIT 1', [`Funding ${ref}`]);
+    if (priorActivity.rows[0]) { await client.query('ROLLBACK'); return res.json({ ok: true, duplicate: true }); }
+
+    let item;
+    if (fundingRequestId) {
+      const id = parseId(fundingRequestId);
+      if (!id) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Invalid funding event.' }); }
+      const locked = await client.query(
+        'SELECT * FROM funding_requests WHERE id=$1 AND user_id=$2 FOR UPDATE',
+        [id, uid]
+      );
+      item = locked.rows[0];
+    } else {
+      const locked = await client.query(
+        `SELECT * FROM funding_requests
+         WHERE user_id=$1 AND status='Pending' AND amount_cents=$2
+         ORDER BY id ASC
+         LIMIT 1
+         FOR UPDATE`,
+        [uid, c]
+      );
+      item = locked.rows[0];
+    }
+    if (!item || item.status !== 'Pending') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'No matching pending funding request.' });
+    }
+    if (Number(item.amount_cents) !== c) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Amount does not match the pending funding request.' });
+    }
+    const updated = await client.query(
+      `UPDATE funding_requests
+       SET status='Approved', settlement_reference=$1, reviewed_at=NOW(), review_note='Settled by funding webhook'
+       WHERE id=$2 AND status='Pending'
+       RETURNING id`,
+      [ref, item.id]
+    );
+    if (!updated.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'No matching pending funding request.' });
+    }
+    await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [c, uid]);
+    if (item.activity_id) {
+      await client.query(`UPDATE activities SET status='Approved' WHERE id=$1`, [item.activity_id]);
+    } else {
+      await client.query(
+        'INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)',
+        [uid, `Funding ${ref}`, 'Funding', c, 'Completed']
+      );
+    }
+    await client.query(
+      'INSERT INTO audit_logs(user_id,action,metadata) VALUES($1,$2,$3)',
+      [uid, 'funding.webhook_settled', { fundingId: item.id, reference: ref, amount: n }]
+    );
     await client.query('COMMIT');
-    res.json({ ok: true });
-  } catch (err) { await client.query('ROLLBACK'); console.error(err); res.status(500).json({ error: 'Funding event could not be recorded.' }); }
+    res.json({ ok: true, fundingRequestId: item.id });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    if (err.code === '23505') return res.json({ ok: true, duplicate: true });
+    console.error(err);
+    res.status(500).json({ error: 'Funding event could not be recorded.' });
+  }
   finally { client.release(); }
 });
 
@@ -869,14 +1107,106 @@ app.post('/api/allocation', auth, verified, restricted, async (req, res) => {
   try {
     await client.query('BEGIN');
     const p = await client.query('SELECT cash_cents FROM portfolios WHERE user_id=$1 FOR UPDATE', [req.session.userId]);
-    if (!p.rows[0] || Number(p.rows[0].cash_cents) < c) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Insufficient available balance.' }); }
+    const pending = await client.query(
+      "SELECT COALESCE(SUM(amount_cents),0) AS amount FROM withdrawal_requests WHERE user_id=$1 AND status='Pending'",
+      [req.session.userId]
+    );
+    const availableCents = Number(p.rows[0]?.cash_cents || 0) - Number(pending.rows[0]?.amount || 0);
+    if (!p.rows[0] || availableCents < c) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Insufficient available balance.' }); }
+    const activity = await client.query(
+      'INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5) RETURNING id',
+      [req.session.userId, name, 'Allocation', c, 'Pending']
+    );
     await client.query('UPDATE portfolios SET cash_cents=cash_cents-$1, updated_at=NOW() WHERE user_id=$2', [c, req.session.userId]);
-    await client.query('INSERT INTO activities(user_id,activity,type,amount_cents,status) VALUES($1,$2,$3,$4,$5)', [req.session.userId, name, 'Allocation', c, 'Pending']);
+    const allocation = await client.query(
+      `INSERT INTO allocations(user_id,name,amount_cents,status,activity_id)
+       VALUES($1,$2,$3,'Pending',$4)
+       RETURNING id,name,amount_cents,status,created_at`,
+      [req.session.userId, name, c, activity.rows[0].id]
+    );
     await client.query('COMMIT');
-    await audit(req, 'allocation.requested', { name, amount: n });
-    res.json({ ok: true });
+    await audit(req, 'allocation.requested', { name, amount: n, allocationId: allocation.rows[0].id });
+    res.json({ ok: true, allocation: { ...allocation.rows[0], amount: money(c) } });
   } catch (err) { await client.query('ROLLBACK'); console.error(err); res.status(500).json({ error: 'Allocation could not be recorded.' }); }
   finally { client.release(); }
+});
+
+async function settleAllocation(client, allocationId, userId, nextStatus) {
+  const locked = await client.query(
+    `SELECT * FROM allocations WHERE id=$1 ${userId ? 'AND user_id=$2' : ''} FOR UPDATE`,
+    userId ? [allocationId, userId] : [allocationId]
+  );
+  const item = locked.rows[0];
+  if (!item) return { error: { status: 404, message: 'Allocation not found.' } };
+  if (item.status !== 'Pending') return { error: { status: 409, message: 'This allocation is no longer pending.' } };
+  if (nextStatus === 'Reversed') {
+    await client.query(
+      'UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2',
+      [item.amount_cents, item.user_id]
+    );
+  }
+  await client.query(
+    `UPDATE allocations SET status=$1, settled_at=NOW() WHERE id=$2`,
+    [nextStatus, item.id]
+  );
+  if (item.activity_id) {
+    await client.query('UPDATE activities SET status=$1 WHERE id=$2', [nextStatus === 'Reversed' ? 'Reversed' : 'Completed', item.activity_id]);
+  }
+  return { item };
+}
+
+app.post('/api/allocations/:id/cancel', auth, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Select an allocation.' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await settleAllocation(client, id, req.session.userId, 'Reversed');
+    if (result.error) { await client.query('ROLLBACK'); return res.status(result.error.status).json({ error: result.error.message }); }
+    await client.query('COMMIT');
+    await audit(req, 'allocation.cancelled', { allocationId: id });
+    res.json({ ok: true, status: 'Reversed' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Allocation could not be cancelled.' });
+  } finally { client.release(); }
+});
+
+app.post('/api/admin/allocations/:id/complete', auth, admin, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Select an allocation.' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await settleAllocation(client, id, null, 'Completed');
+    if (result.error) { await client.query('ROLLBACK'); return res.status(result.error.status).json({ error: result.error.message }); }
+    await client.query('COMMIT');
+    await audit(req, 'allocation.completed', { allocationId: id });
+    res.json({ ok: true, status: 'Completed' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Allocation could not be completed.' });
+  } finally { client.release(); }
+});
+
+app.post('/api/admin/allocations/:id/reverse', auth, admin, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Select an allocation.' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await settleAllocation(client, id, null, 'Reversed');
+    if (result.error) { await client.query('ROLLBACK'); return res.status(result.error.status).json({ error: result.error.message }); }
+    await client.query('COMMIT');
+    await audit(req, 'allocation.reversed', { allocationId: id });
+    res.json({ ok: true, status: 'Reversed' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Allocation could not be reversed.' });
+  } finally { client.release(); }
 });
 
 app.get('/api/admin/users/:id', auth, admin, async (req, res) => {
@@ -1326,11 +1656,6 @@ app.get('/admin.html', auth, admin, (req, res) => res.sendFile(path.join(__dirna
 app.get('/dashboard/apps', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get(['/', '/index.html', '/indexx.html', '/indexxX.html'], sendLanding);
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
-  sendLanding(req, res);
-});
-const crypto = require('crypto');
 const { createTransactionEngine } = require('./scheduler');
 
 const txEngine = createTransactionEngine({
@@ -1361,7 +1686,7 @@ app.post('/api/jobs/tick', async (req, res) => {
 });
 
 // Listener status endpoint
-app.get('/api/listener/status', auth, async (req, res) => {
+app.get('/api/listener/status', auth, admin, async (req, res) => {
   const state = await q('SELECT * FROM wallet_listener_state ORDER BY network');
   const events = await q('SELECT * FROM wallet_tx_events ORDER BY detected_at DESC LIMIT 20');
   res.json({ state: state.rows, events: events.rows });
@@ -1459,6 +1784,11 @@ app.post('/api/commands/execute', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: err.message || 'Command rejected' });
   }
+});
+
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  sendLanding(req, res);
 });
 
 module.exports = app;
