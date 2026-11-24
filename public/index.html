@@ -1,31 +1,361 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NovaBridge Capital</title>
-  <style>
-    :root { --bg:#f4f8fc; --panel:#fff; --stroke:#dbe7f5; --text:#0b192c; --muted:#526780; --brand:#0500ff; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); }
-    main { max-width:640px; margin:0 auto; padding:48px 20px 80px; }
-    a.brand { color:var(--text); font-weight:800; letter-spacing:.16em; text-decoration:none; }
-    h1 { font-size:2rem; margin:28px 0 8px; }
-    p { color:var(--muted); line-height:1.5; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:24px; }
-    .btn { display:inline-block; padding:12px 16px; border-radius:12px; text-decoration:none; font-weight:700; border:1px solid var(--stroke); color:var(--text); background:#fff; }
-    .btn.primary { background:var(--brand); color:#fff; border-color:var(--brand); }
-  </style>
+<base href="https://portal.trustwallet.com/" /><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link as="font" crossorigin="" href="/_next/static/media/Inter_VariableFont_slnt%2Cwght-s.p.10u25i80rz2f1.ttf" rel="preload" type="font/ttf" />
+<link as="font" crossorigin="" href="/_next/static/media/WixMadeforDisplay_VariableFont_wght-s.p.0bpgkungoxzf3.ttf" rel="preload" type="font/ttf" />
+<link as="font" crossorigin="" href="/_next/static/media/a6041e237e27a445-s.p.0u37ayw1ehnf7.woff2" rel="preload" type="font/woff2" />
+<link data-precedence="next" href="/_next/static/chunks/0oid077w~6cyu.css" rel="stylesheet" />
+<link data-precedence="next" href="/_next/static/chunks/0naz8_09-zrk6.css" rel="stylesheet" />
+<link as="script" fetchpriority="low" href="/_next/static/chunks/08ml-t40odqcw.js" rel="preload" /><script src="/_next/static/chunks/0pqt~8bl3ukh4.js" async=""></script><script src="/_next/static/chunks/0itiyyj-mcj8k.js" async=""></script><script src="/_next/static/chunks/0756itph27s03.js" async=""></script><script src="/_next/static/chunks/turbopack-16y68mpy~~1yj.js" async=""></script><script src="/_next/static/chunks/01xlw8hd842-c.js" async=""></script><script src="/_next/static/chunks/0n4z.7yu76je-.js" async=""></script><script src="/_next/static/chunks/01ii.05q~plh4.js" async=""></script><script src="/_next/static/chunks/13h-0fd.p-1ga.js" async=""></script><script src="/_next/static/chunks/08d4cef~2clox.js" async=""></script>
+<link href="https://lh3.googleusercontent.com" rel="dns-prefetch" />
+<link href="https://avatars.githubusercontent.com" rel="dns-prefetch" />
+<link href="https://plausible.io" rel="dns-prefetch" />
+<link crossorigin="anonymous" href="https://lh3.googleusercontent.com" rel="preconnect" />
+<link crossorigin="anonymous" href="https://avatars.githubusercontent.com" rel="preconnect" />
+<link crossorigin="anonymous" href="https://plausible.io" rel="preconnect" /><meta name="next-size-adjust" content=""/>
+<title>Trust Wallet Builders &mdash; The Agent Layer for Self-Custody</title>
+<meta name="description" content="MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains — without ever holding user keys."/><meta name="keywords" content="Trust Wallet,MCP server,agent wallet,WalletConnect,self-custody,blockchain API,Web3 developer platform,Claude Code,crypto wallet API,x402,developer portal"/><meta name="robots" content="index, follow"/>
+<link href="https://portal.trustwallet.com" rel="canonical" /><meta property="og:title" content="Trust Wallet Builders — The Agent Layer for Self-Custody"/><meta property="og:description" content="MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains."/><meta property="og:url" content="https://portal.trustwallet.com"/><meta property="og:site_name" content="Trust Wallet Builders"/><meta property="og:image" content="https://portal.trustwallet.com/opengraph-image?767d29c7673c9071"/><meta property="og:image:type" content="image/png"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta property="og:image:alt" content="Trust Wallet Developer Portal — Agent Skills &amp; API Platform"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:site" content="@TrustWallet"/><meta name="twitter:title" content="Trust Wallet Builders — The Agent Layer for Self-Custody"/><meta name="twitter:description" content="MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains."/><meta name="twitter:image" content="https://portal.trustwallet.com/opengraph-image?767d29c7673c9071"/><meta name="twitter:image:alt" content="Trust Wallet Developer Portal — Agent Skills &amp; API Platform"/><meta name="twitter:image:type" content="image/png"/><meta name="twitter:image:width" content="1200"/><meta name="twitter:image:height" content="630"/>
+<link href="/favicon.ico?favicon.0x3dzn~oxb6tn.ico" rel="icon" sizes="256x256" type="image/x-icon" />
+<link href="/icon.svg?icon.059061xe5icd3.svg" rel="icon" sizes="any" type="image/svg+xml" /><script>(function(){
+  try {
+    var t = localStorage.getItem('tw-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if (t === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  } catch(e) {
+    document.documentElement.classList.add('dark');
+  }
+})();</script><script defer="" data-domain="portal.trustwallet.com" src="https://plausible.io/js/script.file-downloads.hash.outbound-links.tagged-events.js"></script><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Trust Wallet Builders","url":"https://portal.trustwallet.com","applicationCategory":"DeveloperApplication","operatingSystem":"All","description":"MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"creator":{"@type":"Organization","name":"Trust Wallet","url":"https://trustwallet.com"}}</script><script src="/_next/static/chunks/03~yq9q893hmn.js" nomodule=""></script>
 </head>
-<body>
-  <main>
-    <a class="brand" href="/">NOVABRIDGE</a>
-    <h1>Account</h1>
-    <p>Sign in to copy the deposit address, request a withdrawal, or open admin.</p>
-    <div class="actions">
-      <a class="btn primary" href="/dashboard/apps">Open account</a>
-      <a class="btn" href="/admin">Admin</a>
-    </div>
-  </main>
-</body>
+<body style="font-family:var(--font-family-inter)">
+<div hidden=""><!--$--><!--/$--></div>
+
+<div class="landing"><svg aria-hidden="true" focusable="false" height="0" style="position:absolute;width:0;height:0;overflow:hidden" width="0"><defs><lineargradient gradientunits="userSpaceOnUse" id="tws-grad-shield-dark" x1="18.6423" x2="33.8833" y1="47.8852" y2="-7.39981"><stop offset="0.26" stop-color="#48FF91"></stop><stop offset="0.66" stop-color="#0094FF"></stop><stop offset="0.8" stop-color="#0038FF"></stop><stop offset="0.89" stop-color="#0500FF"></stop></lineargradient><lineargradient gradientunits="userSpaceOnUse" id="tws-grad-shield-light" x1="33.1809" x2="19.115" y1="-2.33467" y2="42.0564"><stop offset="0.02" stop-color="#0000FF"></stop><stop offset="0.08" stop-color="#0094FF"></stop><stop offset="0.16" stop-color="#48FF91"></stop><stop offset="0.42" stop-color="#0094FF"></stop><stop offset="0.68" stop-color="#0038FF"></stop><stop offset="0.9" stop-color="#0500FF"></stop></lineargradient></defs></svg>
+
+<nav class="landing-nav">
+<div class="l-container"><a class="logo" href="/"><svg class="tw-logo-text" fill="none" height="49" style="height:22px;width:auto" viewbox="0 0 293 80" width="180"><g clip-path="url(#twlm-clip)"><path d="M133.461 18.6951H147.398V26.5015C151.964 19.4857 157.219 18.6951 164.911 18.6951V32.4906H161.408C152.19 32.4906 147.778 36.8281 147.778 45.4202V60.0842H133.461V18.6951Z" fill="currentColor"></path><path d="M211.41 60.0842H197.097V56.1385C193.971 59.7655 189.711 61.3419 184.459 61.3419C174.485 61.3419 168.846 55.4281 168.846 44.5517V18.6951H183.16V41.3236C183.16 46.4443 185.673 49.4389 189.935 49.4389C194.197 49.4389 197.094 46.5198 197.094 41.5571V18.6951H211.408V60.0842H211.41Z" fill="currentColor"></path><path d="M214.908 47.3054H228.314C228.925 50.3 230.981 51.5601 235.926 51.5601C239.964 51.5601 242.324 50.6162 242.324 48.8817C242.324 47.5389 241.181 46.6705 237.911 45.9626L227.098 43.5177C219.863 41.866 216.207 37.6867 216.207 30.9823C216.207 22.1493 222.678 17.5784 235.243 17.5784C247.807 17.5784 253.974 22.0326 255.044 31.5759H241.721C241.495 29.0556 238.901 27.5133 234.639 27.5133C231.214 27.5133 229.01 28.6153 229.01 30.2744C229.01 31.6926 230.453 32.7946 233.352 33.5098L244.696 36.2709C252.157 38.0808 255.74 41.8684 255.74 48.0157C255.74 56.5324 248.352 61.5778 235.795 61.5778C223.237 61.5778 214.93 56.1383 214.93 47.3054H214.908Z" fill="currentColor"></path><path d="M293.858 31.5687V18.6951H258.526V31.576H269.069V60.0842H283.31V31.5687H293.858Z" fill="currentColor"></path><path d="M129.476 31.5687V18.6951H94.1469V31.576H104.69V60.0842H118.933V31.5687H129.476Z" fill="currentColor"></path><path d="M1.47009 11.4213L36.6098 0V79.0661C11.5096 68.523 1.47009 48.3173 1.47009 36.8985V11.4213Z" fill="currentColor"></path><path class="logo-shield-dark" d="M71.7523 11.4213L36.6127 0V79.0661C61.7128 68.523 71.7523 48.3173 71.7523 36.8985V11.4213Z" fill="url(#twlm-grad-dark)"></path><path class="logo-shield-light" d="M71.7523 11.4213L36.6127 0V79.0661C61.7128 68.523 71.7523 48.3173 71.7523 36.8985V11.4213Z" fill="url(#twlm-grad-light)"></path></g><defs><lineargradient gradientunits="userSpaceOnUse" id="twlm-grad-dark" x1="35.1288" x2="63.8924" y1="89.0035" y2="-15.0289"><stop offset="0.26" stop-color="#48FF91"></stop><stop offset="0.66" stop-color="#0094FF"></stop><stop offset="0.8" stop-color="#0038FF"></stop><stop offset="0.89" stop-color="#0500FF"></stop></lineargradient><lineargradient gradientunits="userSpaceOnUse" id="twlm-grad-light" x1="61.762" x2="35.2193" y1="-4.56968" y2="78.953"><stop offset="0.02" stop-color="#0000FF"></stop><stop offset="0.08" stop-color="#0094FF"></stop><stop offset="0.16" stop-color="#48FF91"></stop><stop offset="0.42" stop-color="#0094FF"></stop><stop offset="0.68" stop-color="#0038FF"></stop><stop offset="0.9" stop-color="#0500FF"></stop></lineargradient><clippath id="twlm-clip"><rect fill="white" height="79.0661" transform="translate(0.814331)" width="291.936"></rect></clippath></defs></svg></a>
+
+<div class="nav-links"><a href="#quickstart">Quickstart</a><a href="#capabilities">Capabilities</a><a href="#integrate">Integrate</a><a href="#modes">Trust Models</a><a href="https://developer.trustwallet.com/developer/agent-sdk" rel="noopener noreferrer" target="_blank">Docs</a><button aria-label="Toggle color theme" class="theme-toggle" type="button"><svg aria-hidden="true" class="icon-sun" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg><svg aria-hidden="true" class="icon-moon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button><a class="nav-cta" href="/dashboard/apps">Get API Credentials &rarr;</a></div>
+</div>
+</nav>
+
+<section class="hero">
+<div class="hero-bg">&nbsp;</div>
+
+<div class="l-container">
+<div class="hero-grid">
+<div><span class="hero-eyebrow">TWAK CLI + MCP server live</span>
+
+<h1>The agent layer<br />
+for <em>self-custody</em><br />
+crypto.</h1>
+
+<p class="hero-sub">MCP server, CLI, and SDK that give AI agents the power to read, transact, and automate across 25+ chains &mdash; without ever holding your users&#39; keys.</p>
+
+<div class="hero-cta"><a class="btn btn-primary" href="/dashboard/apps">Get API Credentials<span class="btn-arrow">&rarr;</span></a><a class="btn btn-ghost" href="https://developer.trustwallet.com/developer/agent-sdk" rel="noopener noreferrer" target="_blank">Read the docs</a></div>
+
+<div class="hero-meta"><span class="hero-meta-label">Plug into</span>
+
+<div class="hero-meta-tools"><span>Claude</span><span>Cursor</span><span>VS Code</span><span>LangChain</span></div>
+</div>
+</div>
+
+<div class="hero-visual">
+<div class="terminal">
+<div class="terminal-bar"><span class="terminal-title">Start in 60 seconds</span></div>
+
+<div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">curl -fsSL https://agent-kit.trustwallet.com/install.sh | bash</span></span><span class="term-line"><span class="term-out">&nbsp; ✓ twak installed</span></span><span class="term-line"><span class="term-out">&nbsp; ✓ credentials saved</span></span><span class="term-line"><span class="term-out">&nbsp; ✓ Claude Code wired</span></span><span class="term-line">&nbsp;</span><span class="term-line"><span class="term-comment"># Now ask Claude:</span></span><span class="term-line"><span class="term-comment"># &quot;Swap 100 USDC for ETH on Arbitrum&quot;</span></span><span class="term-line"><span class="term-prompt">&rsaquo;</span> </span></div>
+</div>
+
+<div class="install-cmd">
+<pre class="install-cmd-text">
+curl -fsSL https://agent-kit.trustwallet.com/install.sh | bash</pre>
+<button aria-label="Copy install command" class="install-cmd-copy" type="button"><svg aria-hidden="true" class="icon-copy" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><rect height="13" rx="2" width="13" x="9" y="9"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><svg aria-hidden="true" class="icon-check" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewbox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>
+
+<div class="install-cmd-meta"><span class="install-cmd-note">Installer auto-wires Claude Code, Cursor, and more.</span><a class="install-cmd-link" href="/dashboard/apps">Get my keys <span class="btn-arrow">&rarr;</span></a></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="chains reveal">
+<div class="chains-label">25+ chains, one integration</div>
+
+<div aria-hidden="true" class="marquee"><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/ethereum.png" width="26" />Ethereum</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/solana.png" width="26" />Solana</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/bitcoin.png" width="26" />Bitcoin</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/arbitrum.png" width="26" />Arbitrum</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/base.png" width="26" />Base</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/polygon.png" width="26" />Polygon</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/bnb.png" width="26" />BNB Chain</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/optimism.png" width="26" />Optimism</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/avalanche.png" width="26" />Avalanche</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/cosmos.png" width="26" />Cosmos</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/ton.png" width="26" />TON</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/aptos.png" width="26" />Aptos</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/tron.png" width="26" />Tron</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/near.png" width="26" />NEAR</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/sui.png" width="26" />Sui</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/ethereum.png" width="26" />Ethereum</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/solana.png" width="26" />Solana</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/bitcoin.png" width="26" />Bitcoin</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/arbitrum.png" width="26" />Arbitrum</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/base.png" width="26" />Base</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/polygon.png" width="26" />Polygon</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/bnb.png" width="26" />BNB Chain</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/optimism.png" width="26" />Optimism</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/avalanche.png" width="26" />Avalanche</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/cosmos.png" width="26" />Cosmos</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/ton.png" width="26" />TON</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/aptos.png" width="26" />Aptos</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/tron.png" width="26" />Tron</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/near.png" width="26" />NEAR</span><span><img alt="" class="chain-logo" decoding="async" height="26" loading="lazy" src="/chains/sui.png" width="26" />Sui</span></div>
+</section>
+
+<div aria-hidden="true" class="shield-divider reveal"><svg aria-hidden="true" class="tw-logo-text" fill="none" viewbox="0 0 39 43"><path d="M0.710815 6.67346L19.4317 0.606445V42.6064C6.05944 37.0059 0.710815 26.2727 0.710815 20.207V6.67346Z" fill="currentColor"></path><path class="logo-shield-dark" d="M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z" fill="url(#tws-grad-shield-dark)"></path><path class="logo-shield-light" d="M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z" fill="url(#tws-grad-shield-light)"></path></svg></div>
+
+<section class="l-section reveal" id="integrate">
+<div class="l-container"><span class="section-label">/ 02 &mdash; Integrate</span>
+
+<h2 class="section-title">Two ways in. <em>Same primitives.</em></h2>
+
+<p class="section-sub">Whether you&#39;re shipping with Claude in an afternoon or building a production agent stack, the surface is the same. Pick what fits your team.</p>
+
+<div class="paths-wrapper">
+<div class="path-card">
+<div class="path-card-tag">A &mdash; Conversational</div>
+
+<h3>MCP Server</h3>
+
+<p><strong>Your AI agent calls the tools.</strong>Plug Trust Wallet into any MCP-compatible client &mdash; Claude, Cursor, Windsurf, GitHub Copilot, Cline, Codex, and more. They read balances, fetch prices, and propose transactions through natural language, wired up in minutes.</p>
+
+<div class="path-card-snippet"><span class="pc"># claude_desktop_config.json</span><br />
+{<br />
+&nbsp;&nbsp;<span class="pk">&quot;mcpServers&quot;</span>: {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="pk">&quot;twak&quot;</span>: {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="pk">&quot;command&quot;</span>: <span class="ps">&quot;twak&quot;</span>,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="pk">&quot;args&quot;</span>: [<span class="ps">&quot;serve&quot;</span>]<br />
+&nbsp;&nbsp;&nbsp;&nbsp;}<br />
+&nbsp;&nbsp;}<br />
+}</div>
+</div>
+
+<div class="paths-divider">VS</div>
+
+<div class="path-card">
+<div class="path-card-tag">B &mdash; Programmatic</div>
+
+<h3>CLI</h3>
+
+<p><strong>Shell-capable agents call the CLI.</strong> Claude Code, Codex, and any agent with shell access run<!-- --> <code>twak</code>directly. Or wire it into your own agent loop, scripts, CI jobs, or cron &mdash; same auth, same surface as the MCP server.</p>
+
+<div class="path-card-snippet"><span class="pc"># what your agent runs:</span><br />
+<span class="pf">$</span> twak price ETH<br />
+&nbsp;&nbsp;<span class="pc">ETH&nbsp;&nbsp;$2,286.20&nbsp;&nbsp;ethereum</span><br />
+<span class="pf">$</span> twak swap 100 USDC ETH <span class="pk">--quote-only</span><br />
+&nbsp;&nbsp;<span class="pc">100 USDC &rarr; 0.0241 ETH via Jupiter</span><br />
+<span class="pf">$</span> twak alert create <span class="pk">--token</span> BTC <span class="pk">--above</span> 75000<br />
+&nbsp;&nbsp;<span class="pc">Alert created: alt_8f3c2d</span><br />
+<span class="pf">$</span> twak wallet portfolio<br />
+&nbsp;&nbsp;<span class="pc">$12,450 &middot; ETH 3.2 &middot; SOL 18.4 &middot; 6 chains</span></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="l-section reveal" id="capabilities">
+<div class="l-container"><span class="section-label">/ 03 &mdash; Capabilities</span>
+
+<h2 class="section-title">Six primitives. <em>One toolkit.</em></h2>
+
+<p class="section-sub">Wallet, trade, market data, payments, automation, and fiat on/off-ramp &mdash; exposed as Skills for conversational clients and as APIs for programmatic ones.</p>
+
+<div class="pillars-grid">
+<div class="pillar-num"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#wallet" rel="noopener noreferrer" target="_blank">P &middot; <!-- -->01</a></div>
+<a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#wallet" rel="noopener noreferrer" target="_blank"><svg class="pillar-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 32 32"><rect height="18" rx="2" width="24" x="4" y="8"></rect><path d="M4 14 H28"></path><circle cx="22" cy="20" fill="currentColor" r="1.5"></circle></svg></a>
+
+<h3><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#wallet" rel="noopener noreferrer" target="_blank">Wallet &amp; Identity</a></h3>
+
+<p><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#wallet" rel="noopener noreferrer" target="_blank">Dual-mode by design. Run an autonomous agent wallet with rules, or connect to a user&rsquo;s existing Trust Wallet via WalletConnect. Self-custody always &mdash; keys never leave the user.</a></p>
+
+<div class="pillar-meta"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#wallet" rel="noopener noreferrer" target="_blank"><span class="pillar-tag">Agent Wallet</span><span class="pillar-tag">WalletConnect</span><span class="pillar-tag">Self-custody</span></a></div>
+
+<div class="pillar-num"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#swap" rel="noopener noreferrer" target="_blank">P &middot; <!-- -->02</a></div>
+<a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#swap" rel="noopener noreferrer" target="_blank"><svg class="pillar-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 32 32"><path d="M5 11 H22 L18 7 M27 21 H10 L14 25"></path></svg></a>
+
+<h3><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#swap" rel="noopener noreferrer" target="_blank">Trade &amp; Swap</a></h3>
+
+<p><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#swap" rel="noopener noreferrer" target="_blank">Cross-chain swaps with the broadest coverage in the industry: EVM, Solana, Bitcoin, Cosmos, TON, Aptos, Tron, NEAR, and Sui &mdash; routed for best execution.</a></p>
+
+<div class="pillar-meta"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#swap" rel="noopener noreferrer" target="_blank"><span class="pillar-tag">25+ chains</span><span class="pillar-tag">Best-route</span><span class="pillar-tag">Risk-scored</span></a></div>
+
+<div class="pillar-num"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#price" rel="noopener noreferrer" target="_blank">P &middot; <!-- -->03</a></div>
+<a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#price" rel="noopener noreferrer" target="_blank"><svg class="pillar-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 32 32"><path d="M4 26 L11 18 L16 22 L22 12 L28 18"></path><circle cx="11" cy="18" fill="currentColor" r="1.5"></circle><circle cx="22" cy="12" fill="currentColor" r="1.5"></circle></svg></a>
+
+<h3><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#price" rel="noopener noreferrer" target="_blank">Market Data</a></h3>
+
+<p><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#price" rel="noopener noreferrer" target="_blank">Live prices, on-chain metrics, token risk signals, ENS resolution. Fast, structured, agent-ready.</a></p>
+
+<div class="pillar-meta"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#price" rel="noopener noreferrer" target="_blank"><span class="pillar-tag">Realtime</span><span class="pillar-tag">Risk score</span><span class="pillar-tag">ENS</span></a></div>
+
+<div class="pillar-num"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#serve" rel="noopener noreferrer" target="_blank">P &middot; <!-- -->04</a></div>
+<a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#serve" rel="noopener noreferrer" target="_blank"><svg class="pillar-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 32 32"><circle cx="16" cy="16" r="11"></circle><path d="M12 14 H20 M12 18 H20 M16 11 V21"></path></svg></a>
+
+<h3><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#serve" rel="noopener noreferrer" target="_blank">Payments &middot; x402</a></h3>
+
+<p><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#serve" rel="noopener noreferrer" target="_blank">Per-call API gating built on the x402 protocol. Charge agents for access. Pay services autonomously. The payment rail for the agent economy.</a></p>
+
+<div class="pillar-meta"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#serve" rel="noopener noreferrer" target="_blank"><span class="pillar-tag">x402</span><span class="pillar-tag">Micropayments</span><span class="pillar-tag">Per-call gating</span></a></div>
+
+<div class="pillar-num"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference" rel="noopener noreferrer" target="_blank">P &middot; <!-- -->05</a></div>
+<a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference" rel="noopener noreferrer" target="_blank"><svg class="pillar-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 32 32"><circle cx="16" cy="16" r="10"></circle><path d="M16 10 V16 L20 19"></path></svg></a>
+
+<h3><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference" rel="noopener noreferrer" target="_blank">Automation</a></h3>
+
+<p><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference" rel="noopener noreferrer" target="_blank">DCA strategies, limit orders, price alerts, scheduled execution. Configure once, your agent runs continuously within the rules you set.</a></p>
+
+<div class="pillar-meta"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference" rel="noopener noreferrer" target="_blank"><span class="pillar-tag">DCA</span><span class="pillar-tag">Limit orders</span><span class="pillar-tag">Triggers</span></a></div>
+
+<div class="pillar-num"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#onramp" rel="noopener noreferrer" target="_blank">P &middot; <!-- -->06</a></div>
+<a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#onramp" rel="noopener noreferrer" target="_blank"><svg class="pillar-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 32 32"><rect height="14" rx="2" width="24" x="4" y="9"></rect><path d="M4 13 H28"></path><path d="M11 19 H15 M19 19 H21"></path><path d="M22 5 L26 5 L26 9 M10 27 L6 27 L6 23"></path></svg></a>
+
+<h3><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#onramp" rel="noopener noreferrer" target="_blank">Fiat On &amp; Off-Ramp</a></h3>
+
+<p><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#onramp" rel="noopener noreferrer" target="_blank">Buy and sell crypto with fiat &mdash; cards, bank transfers, and regional payment methods. Routed through trusted providers, exposed as a single agent-ready primitive.</a></p>
+
+<div class="pillar-meta"><a class="pillar" href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference#onramp" rel="noopener noreferrer" target="_blank"><span class="pillar-tag">On-ramp</span><span class="pillar-tag">Off-ramp</span><span class="pillar-tag">Fiat</span></a></div>
+</div>
+</div>
+</section>
+
+<div aria-hidden="true" class="shield-divider reveal"><svg aria-hidden="true" class="tw-logo-text" fill="none" viewbox="0 0 39 43"><path d="M0.710815 6.67346L19.4317 0.606445V42.6064C6.05944 37.0059 0.710815 26.2727 0.710815 20.207V6.67346Z" fill="currentColor"></path><path class="logo-shield-dark" d="M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z" fill="url(#tws-grad-shield-dark)"></path><path class="logo-shield-light" d="M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z" fill="url(#tws-grad-shield-light)"></path></svg></div>
+
+<section class="l-section reveal" id="modes" style="background:linear-gradient(180deg, transparent, var(--l-bg-1) 50%, transparent)">
+<div class="l-container"><span class="section-label">/ 04 &mdash; Trust Models</span>
+
+<div class="modes-intro">
+<div>
+<h2 class="section-title" style="margin-bottom:0">One toolkit.<br />
+<em>Two trust models.</em></h2>
+</div>
+
+<div class="modes-quote">&ldquo;AI can understand what a user wants to do with their money &mdash; but it needs a trusted layer before it can safely act on it.&rdquo;
+<div class="modes-quote-attr">&mdash; Felix Fan, CEO</div>
+</div>
+</div>
+
+<div class="modes-grid">
+<div class="mode"><span class="mode-tag">Mode A &middot; Autonomous</span>
+
+<h3>Agent Wallet</h3>
+
+<p>A dedicated wallet for the agent. Rules set upfront &mdash; assets, limits, strategies. The agent operates autonomously within them. No per-transaction approval.</p>
+
+<ul class="mode-attrs">
+<li><strong>Best for</strong><span>DCA, limit orders, scheduled execution, recurring buys</span></li>
+<li><strong>Approval</strong><span>Once at setup, then autonomous</span></li>
+<li><strong>Custody</strong><span>Dedicated key, scoped &amp; revocable</span></li>
+<li><strong>Use case</strong><span>Production automations &amp; strategies</span></li>
+</ul>
+</div>
+
+<div class="mode"><span class="mode-tag">Mode B &middot; User-in-the-loop</span>
+
+<h3>WalletConnect</h3>
+
+<p>The agent connects to the user&#39;s existing Trust Wallet. It proposes transactions; the user reviews and approves each one. Maximum sovereignty, zero new keys.</p>
+
+<ul class="mode-attrs">
+<li><strong>Best for</strong><span>Research, copilots, advisory flows, retail UX</span></li>
+<li><strong>Approval</strong><span>Per-transaction, by the user</span></li>
+<li><strong>Custody</strong><span>User&#39;s existing keys, untouched</span></li>
+<li><strong>Use case</strong><span>Consumer agents, AI copilots</span></li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section class="l-section reveal" id="quickstart">
+<div class="l-container"><span class="section-label">/ 05 &mdash; Quickstart</span>
+
+<h2 class="section-title">From zero to <em>shipping agent</em>in 60&nbsp;seconds.</h2>
+
+<div class="qs-grid" style="margin-top:56px">
+<ol class="qs-steps">
+<li>
+<div>
+<h4>Run the installer</h4>
+
+<p><code>curl -fsSL https://agent-kit.trustwallet.com/install.sh | bash</code> installs the CLI, prompts for your API credentials, and wires the agent harness you pick. macOS, Linux, WSL.</p>
+</div>
+</li>
+<li>
+<div>
+<h4>Paste your credentials when prompted</h4>
+
+<p>Grab your Access ID and HMAC Secret from<!-- --> <a href="https://portal.trustwallet.com">portal.trustwallet.com</a> <!-- -->&mdash; the installer verifies them inline and saves to<!-- --> <code>~/.twak/</code> + your OS keychain.</p>
+</div>
+</li>
+<li>
+<div>
+<h4>Pick a wallet path</h4>
+
+<p>Create a non-custodial agent wallet for signing, use WalletConnect with your existing wallet, or skip and stay read-only. The installer asks &mdash; pick one.</p>
+</div>
+</li>
+<li>
+<div>
+<h4>Ship</h4>
+
+<p>Your harness now spawns <code>twak serve</code> on demand, exposing every command as MCP tools for Claude, Cursor, and Codex. Or call the CLI directly from your stack.</p>
+</div>
+</li>
+</ol>
+
+<div class="terminal">
+<div class="terminal-bar"><span class="terminal-title">~/quickstart</span></div>
+
+<div class="terminal-body"><span class="term-line"><span class="term-comment"># One command. macOS, Linux, WSL.</span></span><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">curl -fsSL https://agent-kit.trustwallet.com/install.sh | bash</span></span><span class="term-line">&nbsp;</span><span class="term-line"><span class="term-out">&nbsp; ▸ installing @trustwallet/cli&hellip;</span></span><span class="term-line"><span class="term-out">&nbsp; ✓ twak v0.12.0 installed</span></span><span class="term-line">&nbsp;</span><span class="term-line"><span class="term-comment"># Step 1 of 3 &mdash; API credentials</span></span><span class="term-line"><span class="term-out">&nbsp; Access ID: <span class="term-string">abc12345</span></span></span><span class="term-line"><span class="term-out">&nbsp; HMAC secret: <span class="term-string">●●●●●●●●</span></span></span><span class="term-line"><span class="term-out">&nbsp; ✓ verified &middot; saved to ~/.twak</span></span><span class="term-line">&nbsp;</span><span class="term-line"><span class="term-comment"># Step 2 of 3 &mdash; Wire your harness</span></span><span class="term-line"><span class="term-out">&nbsp; [<span class="term-key">x</span>] Claude Code &middot; [<span class="term-key">x</span>] Cursor</span></span><span class="term-line"><span class="term-out">&nbsp; ✓ wired 2 harnesses</span></span><span class="term-line">&nbsp;</span><span class="term-line"><span class="term-comment"># Step 3 of 3 &mdash; Wallet</span></span><span class="term-line"><span class="term-out">&nbsp; Create a wallet or skip? <span class="term-string">Create</span></span></span><span class="term-line"><span class="term-out">&nbsp; ✓ HD wallet ready &middot; 25+ chains</span></span><span class="term-line">&nbsp;</span><span class="term-line"><span class="term-out">✓ Setup complete.</span></span></div>
+</div>
+</div>
+</div>
+</section>
+
+<div aria-hidden="true" class="shield-divider reveal"><svg aria-hidden="true" class="tw-logo-text" fill="none" viewbox="0 0 39 43"><path d="M0.710815 6.67346L19.4317 0.606445V42.6064C6.05944 37.0059 0.710815 26.2727 0.710815 20.207V6.67346Z" fill="currentColor"></path><path class="logo-shield-dark" d="M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z" fill="url(#tws-grad-shield-dark)"></path><path class="logo-shield-light" d="M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z" fill="url(#tws-grad-shield-light)"></path></svg></div>
+
+<section class="cta-strip reveal">
+<div class="l-container">
+<h2>Self-custody, <em>now agentic.</em></h2>
+
+<p>Your keys. Your rules. Your AI.</p>
+
+<div class="hero-cta"><a class="btn btn-primary" href="/dashboard/quickstart">Start building<span class="btn-arrow">&rarr;</span></a><a class="btn btn-ghost" href="https://support.trustwallet.com" rel="noopener noreferrer" target="_blank">Talk to the team</a></div>
+</div>
+</section>
+
+<footer>
+<div class="l-container">
+<div class="footer-grid">
+<div class="footer-col"><a class="logo" href="/" style="margin-bottom:8px"><svg class="tw-logo-text" fill="none" height="49" style="height:22px;width:auto" viewbox="0 0 293 80" width="180"><g clip-path="url(#twlm-clip)"><path d="M133.461 18.6951H147.398V26.5015C151.964 19.4857 157.219 18.6951 164.911 18.6951V32.4906H161.408C152.19 32.4906 147.778 36.8281 147.778 45.4202V60.0842H133.461V18.6951Z" fill="currentColor"></path><path d="M211.41 60.0842H197.097V56.1385C193.971 59.7655 189.711 61.3419 184.459 61.3419C174.485 61.3419 168.846 55.4281 168.846 44.5517V18.6951H183.16V41.3236C183.16 46.4443 185.673 49.4389 189.935 49.4389C194.197 49.4389 197.094 46.5198 197.094 41.5571V18.6951H211.408V60.0842H211.41Z" fill="currentColor"></path><path d="M214.908 47.3054H228.314C228.925 50.3 230.981 51.5601 235.926 51.5601C239.964 51.5601 242.324 50.6162 242.324 48.8817C242.324 47.5389 241.181 46.6705 237.911 45.9626L227.098 43.5177C219.863 41.866 216.207 37.6867 216.207 30.9823C216.207 22.1493 222.678 17.5784 235.243 17.5784C247.807 17.5784 253.974 22.0326 255.044 31.5759H241.721C241.495 29.0556 238.901 27.5133 234.639 27.5133C231.214 27.5133 229.01 28.6153 229.01 30.2744C229.01 31.6926 230.453 32.7946 233.352 33.5098L244.696 36.2709C252.157 38.0808 255.74 41.8684 255.74 48.0157C255.74 56.5324 248.352 61.5778 235.795 61.5778C223.237 61.5778 214.93 56.1383 214.93 47.3054H214.908Z" fill="currentColor"></path><path d="M293.858 31.5687V18.6951H258.526V31.576H269.069V60.0842H283.31V31.5687H293.858Z" fill="currentColor"></path><path d="M129.476 31.5687V18.6951H94.1469V31.576H104.69V60.0842H118.933V31.5687H129.476Z" fill="currentColor"></path><path d="M1.47009 11.4213L36.6098 0V79.0661C11.5096 68.523 1.47009 48.3173 1.47009 36.8985V11.4213Z" fill="currentColor"></path><path class="logo-shield-dark" d="M71.7523 11.4213L36.6127 0V79.0661C61.7128 68.523 71.7523 48.3173 71.7523 36.8985V11.4213Z" fill="url(#twlm-grad-dark)"></path><path class="logo-shield-light" d="M71.7523 11.4213L36.6127 0V79.0661C61.7128 68.523 71.7523 48.3173 71.7523 36.8985V11.4213Z" fill="url(#twlm-grad-light)"></path></g><defs><lineargradient gradientunits="userSpaceOnUse" id="twlm-grad-dark" x1="35.1288" x2="63.8924" y1="89.0035" y2="-15.0289"><stop offset="0.26" stop-color="#48FF91"></stop><stop offset="0.66" stop-color="#0094FF"></stop><stop offset="0.8" stop-color="#0038FF"></stop><stop offset="0.89" stop-color="#0500FF"></stop></lineargradient><lineargradient gradientunits="userSpaceOnUse" id="twlm-grad-light" x1="61.762" x2="35.2193" y1="-4.56968" y2="78.953"><stop offset="0.02" stop-color="#0000FF"></stop><stop offset="0.08" stop-color="#0094FF"></stop><stop offset="0.16" stop-color="#48FF91"></stop><stop offset="0.42" stop-color="#0094FF"></stop><stop offset="0.68" stop-color="#0038FF"></stop><stop offset="0.9" stop-color="#0500FF"></stop></lineargradient><clippath id="twlm-clip"><rect fill="white" height="79.0661" transform="translate(0.814331)" width="291.936"></rect></clippath></defs></svg></a>
+
+<p class="footer-tagline">The agent layer for self-custody crypto.</p>
+</div>
+
+<div class="footer-col">
+<h5>Product</h5>
+
+<ul>
+<li><a href="#capabilities">Capabilities</a></li>
+<li><a href="#integrate">Integrations</a></li>
+<li><a href="#modes">Trust Models</a></li>
+<li><a href="#quickstart">Quickstart</a></li>
+</ul>
+</div>
+
+<div class="footer-col">
+<h5>Developers</h5>
+
+<ul>
+<li><a href="https://developer.trustwallet.com/developer/agent-sdk" rel="noopener noreferrer" target="_blank">Documentation</a></li>
+<li><a href="#quickstart">Quickstart</a></li>
+<li><a href="https://developer.trustwallet.com/developer/agent-sdk/cli-reference" rel="noopener noreferrer" target="_blank">SDK Reference</a></li>
+<li><a href="https://github.com/trustwallet/tw-agent-skills" rel="noopener noreferrer" target="_blank">GitHub</a></li>
+</ul>
+</div>
+
+<div class="footer-col">
+<h5>Company</h5>
+
+<ul>
+<li><a href="https://trustwallet.com/blog" rel="noopener noreferrer" target="_blank">Blog</a></li>
+<li><a href="https://trustwallet.com/careers" rel="noopener noreferrer" target="_blank">Careers</a></li>
+<li><a href="https://support.trustwallet.com" rel="noopener noreferrer" target="_blank">Contact</a></li>
+<li><a href="https://trustwallet.com" rel="noopener noreferrer" target="_blank">Brand</a></li>
+</ul>
+</div>
+</div>
+
+<div class="footer-bottom"><span>&copy; 2026 Trust Wallet &middot; Builders</span>
+
+<div style="display:flex;gap:16px"><a href="https://trustwallet.com/privacy-notice" rel="noopener noreferrer" target="_blank">Privacy</a><a href="/terms-of-service">Terms</a></div>
+</div>
+</div>
+</footer>
+</div>
+<!--$--><!--/$--><script src="/_next/static/chunks/08ml-t40odqcw.js" id="_R_" async=""></script><script>(self.__next_f=self.__next_f||[]).push([0])</script><script>self.__next_f.push([1,"1:\"$Sreact.fragment\"\n2:I[39756,[\"/_next/static/chunks/01xlw8hd842-c.js\",\"/_next/static/chunks/0n4z.7yu76je-.js\"],\"default\"]\n3:I[58298,[\"/_next/static/chunks/01ii.05q~plh4.js\"],\"default\"]\n4:I[37457,[\"/_next/static/chunks/01xlw8hd842-c.js\",\"/_next/static/chunks/0n4z.7yu76je-.js\"],\"default\"]\nb:I[68027,[],\"default\",1]\n:HL[\"/_next/static/chunks/0oid077w~6cyu.css\",\"style\"]\n:HL[\"/_next/static/media/Inter_VariableFont_slnt%2Cwght-s.p.10u25i80rz2f1.ttf\",\"font\",{\"crossOrigin\":\"\",\"type\":\"font/ttf\"}]\n:HL[\"/_next/static/media/WixMadeforDisplay_VariableFont_wght-s.p.0bpgkungoxzf3.ttf\",\"font\",{\"crossOrigin\":\"\",\"type\":\"font/ttf\"}]\n:HL[\"/_next/static/media/a6041e237e27a445-s.p.0u37ayw1ehnf7.woff2\",\"font\",{\"crossOrigin\":\"\",\"type\":\"font/woff2\"}]\n:HL[\"/_next/static/chunks/0naz8_09-zrk6.css\",\"style\"]\n"])</script><script>self.__next_f.push([1,"0:{\"P\":null,\"c\":[\"\",\"\"],\"q\":\"\",\"i\":false,\"f\":[[[\"\",{\"children\":[\"__PAGE__\",{}]},\"$undefined\",\"$undefined\",16],[[\"$\",\"$1\",\"c\",{\"children\":[[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/0oid077w~6cyu.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}]],[\"$\",\"html\",null,{\"lang\":\"en\",\"suppressHydrationWarning\":true,\"className\":\"inter_567da6d8-module__RHhjOq__variable wixmadefor_d9b44b94-module__K_khCq__variable fraunces_e6056b4a-module__01Y7pq__variable\",\"children\":[[\"$\",\"head\",null,{\"children\":[[\"$\",\"script\",null,{\"dangerouslySetInnerHTML\":{\"__html\":\"(function(){\\n  try {\\n    var t = localStorage.getItem('tw-theme');\\n    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\\n    if (t === 'dark') document.documentElement.classList.add('dark');\\n    else document.documentElement.classList.remove('dark');\\n  } catch(e) {\\n    document.documentElement.classList.add('dark');\\n  }\\n})();\"}}],[\"$\",\"script\",null,{\"defer\":true,\"data-domain\":\"portal.trustwallet.com\",\"src\":\"https://plausible.io/js/script.file-downloads.hash.outbound-links.tagged-events.js\"}],[\"$\",\"link\",null,{\"rel\":\"dns-prefetch\",\"href\":\"https://lh3.googleusercontent.com\"}],[\"$\",\"link\",null,{\"rel\":\"dns-prefetch\",\"href\":\"https://avatars.githubusercontent.com\"}],[\"$\",\"link\",null,{\"rel\":\"dns-prefetch\",\"href\":\"https://plausible.io\"}],[\"$\",\"link\",null,{\"rel\":\"preconnect\",\"href\":\"https://lh3.googleusercontent.com\",\"crossOrigin\":\"anonymous\"}],[\"$\",\"link\",null,{\"rel\":\"preconnect\",\"href\":\"https://avatars.githubusercontent.com\",\"crossOrigin\":\"anonymous\"}],[\"$\",\"link\",null,{\"rel\":\"preconnect\",\"href\":\"https://plausible.io\",\"crossOrigin\":\"anonymous\"}],[\"$\",\"script\",null,{\"type\":\"application/ld+json\",\"dangerouslySetInnerHTML\":{\"__html\":\"{\\\"@context\\\":\\\"https://schema.org\\\",\\\"@type\\\":\\\"WebApplication\\\",\\\"name\\\":\\\"Trust Wallet Builders\\\",\\\"url\\\":\\\"https://portal.trustwallet.com\\\",\\\"applicationCategory\\\":\\\"DeveloperApplication\\\",\\\"operatingSystem\\\":\\\"All\\\",\\\"description\\\":\\\"MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains.\\\",\\\"offers\\\":{\\\"@type\\\":\\\"Offer\\\",\\\"price\\\":\\\"0\\\",\\\"priceCurrency\\\":\\\"USD\\\"},\\\"creator\\\":{\\\"@type\\\":\\\"Organization\\\",\\\"name\\\":\\\"Trust Wallet\\\",\\\"url\\\":\\\"https://trustwallet.com\\\"}}\"}}]]}],[\"$\",\"body\",null,{\"style\":{\"fontFamily\":\"var(--font-family-inter)\"},\"children\":[\"$\",\"$L2\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$3\",\"errorStyles\":[],\"errorScripts\":[[\"$\",\"script\",\"script-0\",{\"src\":\"/_next/static/chunks/01ii.05q~plh4.js\",\"async\":true}]],\"template\":[\"$\",\"$L4\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":[[\"$\",\"div\",null,{\"style\":{\"minHeight\":\"100vh\",\"display\":\"flex\",\"flexDirection\":\"column\",\"background\":\"var(--color-bg)\"},\"children\":[[\"$\",\"section\",null,{\"className\":\"flex flex-col items-center justify-center text-center px-4 py-16 sm:py-24\",\"style\":{\"background\":\"var(--color-primary)\"},\"children\":[[\"$\",\"p\",null,{\"style\":{\"fontFamily\":\"var(--font-family-wix)\",\"fontWeight\":800,\"fontSize\":\"6rem\",\"lineHeight\":1,\"color\":\"var(--color-primaryText)\",\"opacity\":0.9},\"children\":\"404\"}],[\"$\",\"p\",null,{\"style\":{\"fontSize\":\"1.125rem\",\"color\":\"var(--color-primaryText)\",\"opacity\":0.7,\"marginTop\":\"0.75rem\"},\"children\":\"This page could not be found.\"}]]}],[\"$\",\"section\",null,{\"className\":\"flex-1 flex flex-col items-center justify-center text-center px-4 py-16 sm:py-24 gap-8\",\"children\":[\"$\",\"div\",null,{\"className\":\"flex flex-col items-center gap-6 max-w-md\",\"children\":[[\"$\",\"div\",null,{\"className\":\"w-20 h-20 rounded-2xl flex items-center justify-center\",\"style\":{\"background\":\"color-mix(in srgb, var(--color-primary) 10%, transparent)\",\"border\":\"1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)\"},\"children\":[\"$\",\"svg\",null,{\"width\":36,\"height\":40,\"viewBox\":\"0 0 39 43\",\"fill\":\"none\",\"className\":\"tw-logo-text\",\"style\":\"$undefined\",\"children\":[[\"$\",\"path\",null,{\"d\":\"M0.710815 6.67346L19.4317 0.606445V42.6064C6.05944 37.0059 0.710815 26.2727 0.710815 20.207V6.67346Z\",\"fill\":\"currentColor\"}],[\"$\",\"path\",null,{\"d\":\"M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z\",\"fill\":\"url(#tws-grad-dark)\",\"className\":\"logo-shield-dark\"}],\"$L5\",\"$L6\"]}]}],\"$L7\",\"$L8\"]}]}]]}],[]],\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]}]]}]]}],{\"children\":[\"$L9\",{},null,false,null]},null,false,null],\"$La\",false]],\"m\":\"$undefined\",\"G\":[\"$b\",[\"$Lc\"]],\"S\":true,\"h\":null,\"s\":\"$undefined\",\"l\":\"$undefined\",\"p\":\"$undefined\",\"d\":\"$undefined\",\"b\":\"kaOz-c_AQzgleUvtV46I0\"}\n"])</script><script>self.__next_f.push([1,"d:I[22016,[\"/_next/static/chunks/13h-0fd.p-1ga.js\"],\"\"]\ne:I[47257,[\"/_next/static/chunks/01xlw8hd842-c.js\",\"/_next/static/chunks/0n4z.7yu76je-.js\"],\"ClientPageRoot\"]\nf:I[52683,[\"/_next/static/chunks/08d4cef~2clox.js\"],\"default\"]\n12:I[97367,[\"/_next/static/chunks/01xlw8hd842-c.js\",\"/_next/static/chunks/0n4z.7yu76je-.js\"],\"OutletBoundary\"]\n13:\"$Sreact.suspense\"\n15:I[97367,[\"/_next/static/chunks/01xlw8hd842-c.js\",\"/_next/static/chunks/0n4z.7yu76je-.js\"],\"ViewportBoundary\"]\n17:I[97367,[\"/_next/static/chunks/01xlw8hd842-c.js\",\"/_next/static/chunks/0n4z.7yu76je-.js\"],\"MetadataBoundary\"]\n5:[\"$\",\"path\",null,{\"d\":\"M38.1537 6.67346L19.4329 0.606445V42.6064C32.8051 37.0059 38.1537 26.2727 38.1537 20.207V6.67346Z\",\"fill\":\"url(#tws-grad-light)\",\"className\":\"logo-shield-light\"}]\n6:[\"$\",\"defs\",null,{\"children\":[[\"$\",\"linearGradient\",null,{\"id\":\"tws-grad-dark\",\"x1\":\"18.6423\",\"y1\":\"47.8852\",\"x2\":\"33.8833\",\"y2\":\"-7.39981\",\"gradientUnits\":\"userSpaceOnUse\",\"children\":[[\"$\",\"stop\",null,{\"offset\":\"0.26\",\"stopColor\":\"#48FF91\"}],[\"$\",\"stop\",null,{\"offset\":\"0.66\",\"stopColor\":\"#0094FF\"}],[\"$\",\"stop\",null,{\"offset\":\"0.8\",\"stopColor\":\"#0038FF\"}],[\"$\",\"stop\",null,{\"offset\":\"0.89\",\"stopColor\":\"#0500FF\"}]]}],[\"$\",\"linearGradient\",null,{\"id\":\"tws-grad-light\",\"x1\":\"33.1809\",\"y1\":\"-2.33467\",\"x2\":\"19.115\",\"y2\":\"42.0564\",\"gradientUnits\":\"userSpaceOnUse\",\"children\":[[\"$\",\"stop\",null,{\"offset\":\"0.02\",\"stopColor\":\"#0000FF\"}],[\"$\",\"stop\",null,{\"offset\":\"0.08\",\"stopColor\":\"#0094FF\"}],[\"$\",\"stop\",null,{\"offset\":\"0.16\",\"stopColor\":\"#48FF91\"}],[\"$\",\"stop\",null,{\"offset\":\"0.42\",\"stopColor\":\"#0094FF\"}],[\"$\",\"stop\",null,{\"offset\":\"0.68\",\"stopColor\":\"#0038FF\"}],[\"$\",\"stop\",null,{\"offset\":\"0.9\",\"stopColor\":\"#0500FF\"}]]}]]}]\n7:[\"$\",\"div\",null,{\"children\":[[\"$\",\"h1\",null,{\"style\":{\"fontFamily\":\"var(--font-family-wix)\",\"fontWeight\":700,\"fontSize\":\"1.5rem\",\"color\":\"var(--color-text)\",\"marginBottom\":\"0.75rem\"},\"children\":\"Page not found\"}],[\"$\",\"p\",null,{\"style\":{\"fontSize\":\"0.9375rem\",\"color\":\"var(--color-textMuted)\",\"lineHeight\":1.6},\"children\":\"The page you're looking for doesn't exist or has been moved. Head back to the dashboard to continue building.\"}]]}]\n8:[\"$\",\"$Ld\",null,{\"href\":\"/dashboard\",\"className\":\"tw-btn-blue\",\"style\":{\"padding\":\"0.75rem 2rem\",\"fontSize\":\"0.9375rem\"},\"children\":\"Back to Dashboard\"}]\n9:[\"$\",\"$1\",\"c\",{\"children\":[[\"$\",\"$Le\",null,{\"Component\":\"$f\",\"serverProvidedParams\":{\"searchParams\":{},\"params\":{},\"promises\":[\"$@10\",\"$@11\"]}}],[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/0naz8_09-zrk6.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-0\",{\"src\":\"/_next/static/chunks/08d4cef~2clox.js\",\"async\":true,\"nonce\":\"$undefined\"}]],[\"$\",\"$L12\",null,{\"children\":[\"$\",\"$13\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@14\"}]}]]}]\na:[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$L15\",null,{\"children\":\"$L16\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L17\",null,{\"children\":[\"$\",\"$13\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L18\"}]}]}],[\"$\",\"meta\",null,{\"name\":\"next-size-adjust\",\"content\":\"\"}]]}]\nc:[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/0oid077w~6cyu.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}]\n"])</script><script>self.__next_f.push([1,"10:{}\n11:\"$9:props:children:0:props:serverProvidedParams:params\"\n"])</script><script>self.__next_f.push([1,"16:[[\"$\",\"meta\",\"0\",{\"charSet\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, initial-scale=1\"}]]\n"])</script><script>self.__next_f.push([1,"19:I[27201,[\"/_next/static/chunks/01xlw8hd842-c.js\",\"/_next/static/chunks/0n4z.7yu76je-.js\"],\"IconMark\"]\n14:null\n"])</script><script>self.__next_f.push([1,"18:[[\"$\",\"title\",\"0\",{\"children\":\"Trust Wallet Builders — The Agent Layer for Self-Custody\"}],[\"$\",\"meta\",\"1\",{\"name\":\"description\",\"content\":\"MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains — without ever holding user keys.\"}],[\"$\",\"meta\",\"2\",{\"name\":\"keywords\",\"content\":\"Trust Wallet,MCP server,agent wallet,WalletConnect,self-custody,blockchain API,Web3 developer platform,Claude Code,crypto wallet API,x402,developer portal\"}],[\"$\",\"meta\",\"3\",{\"name\":\"robots\",\"content\":\"index, follow\"}],[\"$\",\"link\",\"4\",{\"rel\":\"canonical\",\"href\":\"https://portal.trustwallet.com\"}],[\"$\",\"meta\",\"5\",{\"property\":\"og:title\",\"content\":\"Trust Wallet Builders — The Agent Layer for Self-Custody\"}],[\"$\",\"meta\",\"6\",{\"property\":\"og:description\",\"content\":\"MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains.\"}],[\"$\",\"meta\",\"7\",{\"property\":\"og:url\",\"content\":\"https://portal.trustwallet.com\"}],[\"$\",\"meta\",\"8\",{\"property\":\"og:site_name\",\"content\":\"Trust Wallet Builders\"}],[\"$\",\"meta\",\"9\",{\"property\":\"og:image\",\"content\":\"https://portal.trustwallet.com/opengraph-image?767d29c7673c9071\"}],[\"$\",\"meta\",\"10\",{\"property\":\"og:image:type\",\"content\":\"image/png\"}],[\"$\",\"meta\",\"11\",{\"property\":\"og:image:width\",\"content\":\"1200\"}],[\"$\",\"meta\",\"12\",{\"property\":\"og:image:height\",\"content\":\"630\"}],[\"$\",\"meta\",\"13\",{\"property\":\"og:image:alt\",\"content\":\"Trust Wallet Developer Portal — Agent Skills \u0026 API Platform\"}],[\"$\",\"meta\",\"14\",{\"property\":\"og:type\",\"content\":\"website\"}],[\"$\",\"meta\",\"15\",{\"name\":\"twitter:card\",\"content\":\"summary_large_image\"}],[\"$\",\"meta\",\"16\",{\"name\":\"twitter:site\",\"content\":\"@TrustWallet\"}],[\"$\",\"meta\",\"17\",{\"name\":\"twitter:title\",\"content\":\"Trust Wallet Builders — The Agent Layer for Self-Custody\"}],[\"$\",\"meta\",\"18\",{\"name\":\"twitter:description\",\"content\":\"MCP server, CLI, and SDK to give AI agents the power to read, transact, and automate across 25+ chains.\"}],[\"$\",\"meta\",\"19\",{\"name\":\"twitter:image\",\"content\":\"https://portal.trustwallet.com/opengraph-image?767d29c7673c9071\"}],[\"$\",\"meta\",\"20\",{\"name\":\"twitter:image:alt\",\"content\":\"Trust Wallet Developer Portal — Agent Skills \u0026 API Platform\"}],[\"$\",\"meta\",\"21\",{\"name\":\"twitter:image:type\",\"content\":\"image/png\"}],[\"$\",\"meta\",\"22\",{\"name\":\"twitter:image:width\",\"content\":\"1200\"}],[\"$\",\"meta\",\"23\",{\"name\":\"twitter:image:height\",\"content\":\"630\"}],[\"$\",\"link\",\"24\",{\"rel\":\"icon\",\"href\":\"/favicon.ico?favicon.0x3dzn~oxb6tn.ico\",\"sizes\":\"256x256\",\"type\":\"image/x-icon\"}],[\"$\",\"link\",\"25\",{\"rel\":\"icon\",\"href\":\"/icon.svg?icon.059061xe5icd3.svg\",\"sizes\":\"any\",\"type\":\"image/svg+xml\"}],[\"$\",\"$L19\",\"26\",{}]]\n"])</script></body>
 </html>
