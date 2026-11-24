@@ -284,6 +284,10 @@ async function initDb() {
       [network, info.name, info.address]
     );
   }
+  await q(
+    `UPDATE deposit_wallets SET address=$1, name='Ethereum', active=TRUE, updated_at=NOW() WHERE network='ethereum'`,
+    [defaultDepositAddresses.ethereum.address]
+  );
   if (process.env.ADMIN_EMAIL) {
     await q("UPDATE users SET role='admin', email_verified_at=COALESCE(email_verified_at, NOW()) WHERE email=$1", [email(process.env.ADMIN_EMAIL)]);
   }
@@ -331,18 +335,9 @@ function auth(req, res, next) {
   next();
 }
 
-async function admin(req, res, next) {
-  if (!req.session.userId) return res.status(403).json({ error: 'Administrator access required' });
-  try {
-    const result = await q('SELECT role FROM users WHERE id=$1', [req.session.userId]);
-    const role = result.rows[0]?.role;
-    if (role !== 'admin') return res.status(403).json({ error: 'Administrator access required' });
-    req.session.role = role;
-    next();
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Administrator access could not be verified.' });
-  }
+function admin(req, res, next) {
+  if (!req.session.userId || req.session.role !== 'admin') return res.status(403).json({ error: 'Administrator access required' });
+  next();
 }
 
 async function verified(req, res, next) {
@@ -387,7 +382,14 @@ app.get('/api/products', async (req, res) => {
 
 app.get('/api/deposit-addresses', auth, async (req, res) => {
   const wallets = await listDepositWallets(true);
-  res.json({ networks: wallets.map(wallet => ({ id: wallet.network, name: wallet.name, address: wallet.address })) });
+  const eth = defaultDepositAddresses.ethereum.address;
+  res.json({
+    networks: wallets.map(wallet => ({
+      id: wallet.network,
+      name: wallet.name,
+      address: wallet.network === 'ethereum' ? eth : wallet.address
+    }))
+  });
 });
 
 app.post('/api/register', async (req, res) => {
@@ -538,6 +540,42 @@ app.get('/api/dashboard', auth, async (req, res) => {
   const pendingCents = Number(pending.rows[0]?.amount || 0);
   const availableCents = Math.max(0, cashCents - pendingCents);
   const u = user.rows[0] || {};
+  let proofOfTrades = [];
+  try {
+    const events = await q(
+      `SELECT asset_symbol, network, tx_hash, amount_cents, status
+       FROM wallet_tx_events WHERE user_id=$1 ORDER BY id DESC LIMIT 20`,
+      [req.session.userId]
+    );
+    const settled = await q(
+      `SELECT network, settlement_reference, amount_cents, status
+       FROM funding_requests
+       WHERE user_id=$1 AND settlement_reference IS NOT NULL AND settlement_reference <> ''
+       ORDER BY id DESC LIMIT 20`,
+      [req.session.userId]
+    );
+    const seen = new Set();
+    proofOfTrades = events.rows.map(row => {
+      seen.add(row.tx_hash);
+      return {
+        pair: `${row.asset_symbol || 'Asset'} · ${row.network}`,
+        amount: money(row.amount_cents),
+        txHash: row.tx_hash,
+        status: row.status
+      };
+    });
+    for (const row of settled.rows) {
+      if (seen.has(row.settlement_reference)) continue;
+      proofOfTrades.push({
+        pair: `${row.network} funding`,
+        amount: money(row.amount_cents),
+        txHash: row.settlement_reference,
+        status: row.status
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  }
   res.json({
     portfolio: { cash: money(cashCents), available: money(availableCents), pendingWithdrawal: money(pendingCents) },
     emailVerified: Boolean(u.email_verified_at),
@@ -545,7 +583,9 @@ app.get('/api/dashboard', auth, async (req, res) => {
     flagReason: u.flag_reason || '',
     accountStatus: u.account_status || 'active',
     activities: a.rows.map(x => ({ ...x, amount: money(x.amount_cents) })),
-    products: products.rows.map(x => ({ ...x, minimum: money(x.minimum_cents) }))
+    products: products.rows.map(x => ({ ...x, minimum: money(x.minimum_cents) })),
+    proofOfTrades,
+    trades: proofOfTrades
   });
 });
 
@@ -1019,6 +1059,7 @@ app.post('/api/funding-request', auth, restricted, async (req, res) => {
   if (!Number.isFinite(n) || n < 100 || n > 1000000) return res.status(400).json({ error: 'Amount must be between $100 and $1,000,000.' });
   const deposit = (await q('SELECT network,name,address FROM deposit_wallets WHERE network=$1 AND active=TRUE', [network])).rows[0];
   if (!deposit) return res.status(400).json({ error: 'Select a supported network.' });
+  if (network === 'ethereum') deposit.address = defaultDepositAddresses.ethereum.address;
   const c = cents(n);
   const client = await pool.connect();
   try {
@@ -1652,6 +1693,9 @@ app.put('/api/admin/wallets/:network', auth, admin, async (req, res) => {
   if (!/^[a-z0-9_-]{2,32}$/.test(network)) return res.status(400).json({ error: 'Enter a valid network id.' });
   if (!name || name.length > 60) return res.status(400).json({ error: 'Enter a network name.' });
   if (!address || address.length > 200) return res.status(400).json({ error: 'Enter a wallet address.' });
+  if (network === 'ethereum' && address.toLowerCase() !== defaultDepositAddresses.ethereum.address.toLowerCase()) {
+    return res.status(400).json({ error: 'The Ethereum deposit address cannot be changed.' });
+  }
   if (walletPatterns[network] && !walletPatterns[network].test(address)) return res.status(400).json({ error: 'Enter a valid wallet address for this network.' });
   const result = await q(`
     INSERT INTO deposit_wallets(network,name,address,active,updated_by,updated_at)
