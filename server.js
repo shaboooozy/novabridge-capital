@@ -551,6 +551,22 @@ app.get('/api/dashboard', auth, async (req, res) => {
 
 const linkMessage = (email, nonce) => `NovaBridge Capital\nLink wallet to ${email}\n${nonce}`;
 
+function recoverPersonalSign(message, signature) {
+  let sig = String(signature || '').trim();
+  if (/^0x[0-9a-fA-F]{130}$/.test(sig)) {
+    const v = parseInt(sig.slice(-2), 16);
+    if (v < 27) sig = sig.slice(0, -2) + (v + 27).toString(16).padStart(2, '0');
+  }
+  const hex = Buffer.from(message, 'utf8').toString('hex');
+  for (const candidate of [message, hex, '0x' + hex]) {
+    try {
+      const addr = verifyMessage(candidate, sig);
+      if (addr) return addr.toLowerCase();
+    } catch (_) {}
+  }
+  return '';
+}
+
 app.get('/api/linked-wallets/nonce', auth, async (req, res) => {
   const user = await q('SELECT email FROM users WHERE id=$1', [req.session.userId]);
   if (!user.rows[0]) return res.status(401).json({ error: 'Account not found.' });
@@ -576,8 +592,9 @@ app.post('/api/linked-wallets/connect', auth, async (req, res) => {
     if (network === 'ethereum') {
       address = address.toLowerCase();
       let recovered = '';
-      try { recovered = verifyMessage(message, signature).toLowerCase(); }
-      catch { return res.status(400).json({ error: 'The wallet signature could not be checked.' }); }
+      try { recovered = recoverPersonalSign(message, signature); }
+      catch { recovered = ''; }
+      if (!recovered) return res.status(400).json({ error: 'The wallet signature could not be checked.' });
       if (recovered !== address) return res.status(400).json({ error: 'That wallet did not approve the link.' });
     } else if (network === 'solana') {
       let ok = false;
@@ -1656,7 +1673,10 @@ function sendLanding(req, res) {
   res.type('html').send(html);
 }
 
-app.get('/admin.html', auth, admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get(['/admin', '/admin.html'], (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 app.get('/dashboard/apps', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get(['/', '/index.html', '/indexx.html', '/indexxX.html'], sendLanding);
 app.use(express.static(path.join(__dirname, 'public')));

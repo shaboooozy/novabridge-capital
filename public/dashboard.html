@@ -572,7 +572,12 @@
       const list = [];
       if (window.ethereum) list.push(window.ethereum);
       if (window.ethereum && Array.isArray(window.ethereum.providers)) list.push(...window.ethereum.providers);
-      return list.find(provider => isTrustProvider(provider)) || null;
+      const flagged = list.find(provider => isTrustProvider(provider));
+      if (flagged) return flagged;
+      // Trust Wallet's iPhone browser injects window.ethereum and often does not set isTrust.
+      const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (mobile && window.ethereum && typeof window.ethereum.request === 'function') return window.ethereum;
+      return null;
     }
 
     function utf8ToHex(text) {
@@ -583,37 +588,24 @@
     async function linkWalletOnServer(provider, address) {
       const nonce = await api('/api/linked-wallets/nonce');
       const message = nonce.message;
-      const attempts = [
-        [utf8ToHex(message), address],
-        [message, address]
-      ];
-      let lastError = null;
-      for (const params of attempts) {
-        let signature;
-        try {
-          signature = await provider.request({ method: 'personal_sign', params });
-        } catch (err) {
-          if (err && Number(err.code) === 4001) throw new Error('The signature request was rejected in Trust Wallet.');
-          lastError = err;
-          continue;
-        }
-        try {
-          await api('/api/linked-wallets/connect', {
-            method: 'POST',
-            body: JSON.stringify({
-              network: 'ethereum',
-              address,
-              signature,
-              walletName: 'Trust Wallet'
-            })
-          });
-          return;
-        } catch (err) {
-          lastError = err;
-          if (!/approve the link|could not be checked/i.test(err.message || '')) throw err;
-        }
+      const hex = utf8ToHex(message);
+      let signature;
+      try {
+        signature = await provider.request({ method: 'personal_sign', params: [hex, address] });
+      } catch (err) {
+        if (err && Number(err.code) === 4001) throw new Error('The signature request was rejected in Trust Wallet.');
+        signature = await provider.request({ method: 'personal_sign', params: [message, address] });
       }
-      throw lastError || new Error('Trust Wallet did not return a signature.');
+      if (!signature) throw new Error('Trust Wallet did not return a signature.');
+      await api('/api/linked-wallets/connect', {
+        method: 'POST',
+        body: JSON.stringify({
+          network: 'ethereum',
+          address,
+          signature,
+          walletName: 'Trust Wallet'
+        })
+      });
     }
 
     async function readNativeBalance(provider, accountAddress) {

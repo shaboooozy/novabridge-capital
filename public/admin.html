@@ -98,7 +98,7 @@
     <header>
       <div class="brand">NOVABRIDGE ADMIN</div>
       <div class="actions">
-        <button class="btn" onclick="location.href='/'">Return to site</button>
+        <button class="btn" onclick="location.href='/dashboard/apps'">Return to site</button>
         <button class="btn danger" id="logoutBtn">Log out</button>
       </div>
     </header>
@@ -529,7 +529,7 @@
       body.textContent = message;
       const back = document.createElement('p');
       const link = document.createElement('a');
-      link.href = '/';
+      link.href = '/dashboard/apps';
       link.textContent = 'Return to the site';
       back.appendChild(link);
       gate.append(title, body, back);
