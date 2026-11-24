@@ -3,58 +3,206 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NovaBridge</title>
+  <title>Account Dashboard</title>
   <style>
     :root {
-      --bg: #0a1211;
-      --panel: #101d1b;
-      --stroke: rgba(255,255,255,0.08);
-      --text: #edf6f3;
-      --muted: #a9c2ba;
-      --brand: #7ee0b8;
-      --danger: #ffb4b4;
+      --bg: #f4f8fc;
+      --panel: #ffffff;
+      --stroke: #dbe7f5;
+      --text: #0b192c;
+      --muted: #526780;
+      --brand: #0500ff;
+      --brand-hover: #0000cc;
+      --brand-soft: #eef2ff;
+      --brand-border: #bfd0ff;
+      --danger: #b91c1c;
+      --danger-soft: #fef2f2;
+      --danger-border: #fecaca;
+      --warn: #92400e;
+      --warn-soft: #fffbeb;
+      --warn-border: #fde68a;
+      --success: #065f46;
+      --success-soft: #ecfdf5;
+      --success-border: #a7f3d0;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      background: #0a1211;
+      background: var(--bg);
       color: var(--text);
     }
     .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 80px; }
-    header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--stroke); }
-    .brand { font-weight: 700; letter-spacing: 0.16em; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--stroke);
+    }
+    .brand {
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--brand);
+    }
     .actions, .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     a { color: var(--brand); }
     .btn {
-      border: 1px solid var(--stroke); border-radius: 12px; padding: 11px 14px; color: var(--text);
-      background: rgba(255,255,255,0.02); cursor: pointer; font-weight: 700; min-height: 44px;
-      text-decoration: none; display: inline-flex; align-items: center;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 11px 14px;
+      color: var(--text);
+      background: var(--panel);
+      cursor: pointer;
+      font-weight: 700;
+      min-height: 44px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease;
     }
-    .btn.primary { background: #183f34; border-color: rgba(126,224,184,0.4); }
-    .panel { margin-top: 22px; background: rgba(16,29,27,0.9); border: 1px solid var(--stroke); border-radius: 18px; padding: 18px; }
-    h1, h2 { margin: 0 0 8px; }
+    .btn:hover:not(:disabled) {
+      background: var(--brand-soft);
+      border-color: var(--brand-border);
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #ffffff;
+    }
+    .btn.primary:hover:not(:disabled) {
+      background: var(--brand-hover);
+      border-color: var(--brand-hover);
+    }
+    .btn.warn {
+      background: var(--warn-soft);
+      border-color: var(--warn-border);
+      color: var(--warn);
+    }
+    .panel {
+      margin-top: 22px;
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 4px 18px rgba(11, 25, 44, 0.04);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h1, h2, h3 { margin: 0 0 8px; color: var(--text); }
     .muted { color: var(--muted); line-height: 1.5; }
     form, .stack { display: grid; gap: 12px; }
-    label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); display: block; margin-bottom: 6px; }
-    input {
-      width: 100%; padding: 12px 13px; border-radius: 10px; border: 1px solid var(--stroke);
-      background: rgba(255,255,255,0.02); color: var(--text); font-size: 1rem; min-height: 44px;
+    label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 700;
     }
-    .tabs { display: flex; gap: 8px; margin: 8px 0 4px; }
-    .tab { border: 1px solid var(--stroke); background: transparent; color: var(--muted); border-radius: 999px; padding: 9px 14px; cursor: pointer; font-weight: 700; min-height: 44px; }
-    .tab.active { color: var(--text); border-color: rgba(126,224,184,0.45); }
-    .notice { border: 1px solid rgba(126,224,184,0.25); border-radius: 12px; padding: 12px 14px; color: #baf8db; }
-    .notice.error { border-color: rgba(255,180,180,0.35); color: var(--danger); }
+    input, select {
+      width: 100%;
+      padding: 12px 13px;
+      border-radius: 10px;
+      border: 1px solid var(--stroke);
+      background: #f9fbfe;
+      color: var(--text);
+      font-size: 1rem;
+      min-height: 44px;
+    }
+    input:focus, select:focus {
+      outline: 2px solid rgba(5, 0, 255, 0.18);
+      border-color: var(--brand);
+      background: #ffffff;
+    }
+    input[readonly] {
+      background: #eef4fb;
+      color: var(--muted);
+    }
+    .tabs { display: flex; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap; }
+    .tab {
+      border: 1px solid var(--stroke);
+      background: var(--panel);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      min-height: 44px;
+    }
+    .tab.active {
+      color: var(--brand);
+      border-color: var(--brand);
+      background: var(--brand-soft);
+    }
+    .notice {
+      border: 1px solid var(--success-border);
+      background: var(--success-soft);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--success);
+      margin-top: 12px;
+      font-weight: 600;
+    }
+    .notice.error {
+      border-color: var(--danger-border);
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+    .notice.warn {
+      border-color: var(--warn-border);
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
-    .stat { border: 1px solid var(--stroke); border-radius: 14px; padding: 12px; }
-    .stat b { display: block; font-size: 1.25rem; margin-top: 4px; }
+    .stat {
+      border: 1px solid var(--stroke);
+      background: #f9fbfe;
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .stat b { display: block; font-size: 1.25rem; margin-top: 4px; color: var(--text); }
+    .wallet-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      font-size: 0.85rem;
+      background: #f9fbfe;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+    .dot.connected { background: var(--brand); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--stroke); font-size: 0.92rem; vertical-align: top; }
-    th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--stroke);
+      font-size: 0.92rem;
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
     .hidden { display: none; }
     @media (max-width: 720px) {
-      .stats { grid-template-columns: 1fr; }
+      .stats, .grid-2 { grid-template-columns: 1fr; }
       header { flex-direction: column; align-items: flex-start; }
       .wrap { padding: 16px 12px 64px; }
     }
@@ -63,7 +211,7 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="brand">NOVABRIDGE</div>
+      <div class="brand">PORTAL</div>
       <div class="actions">
         <a class="btn" href="/">Back</a>
         <a class="btn hidden" id="adminLink" href="/admin.html">Admin</a>
@@ -79,37 +227,160 @@
         <button class="tab" id="tabRegister" type="button">Create account</button>
       </div>
       <form id="loginForm">
-        <div><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+        <div><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" required></div>
         <div><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" minlength="8" required></div>
         <button class="btn primary" type="submit">Sign in</button>
       </form>
       <form id="registerForm" class="hidden">
         <div><label for="regName">Name</label><input id="regName" autocomplete="name" required></div>
-        <div><label for="regEmail">Email</label><input id="regEmail" type="email" autocomplete="username" required></div>
+        <div><label for="regEmail">Email</label><input id="regEmail" type="email" autocomplete="email" required></div>
         <div><label for="regPassword">Password</label><input id="regPassword" type="password" autocomplete="new-password" minlength="8" required></div>
         <button class="btn primary" type="submit">Create account</button>
       </form>
-      <p class="notice error hidden" id="gateError"></p>
+      <p class="notice error hidden" id="gateError" aria-live="polite"></p>
     </section>
 
     <section id="account" class="hidden">
+      <!-- Overview -->
       <div class="panel">
-        <h1 id="hello">Account</h1>
-        <p class="muted" id="who"></p>
+        <div class="panel-header">
+          <div>
+            <h1 id="hello">Account</h1>
+            <p class="muted" id="who"></p>
+          </div>
+          <div class="actions">
+            <span class="wallet-pill" id="walletBadge">
+              <span class="dot" id="walletDot"></span>
+              <span id="walletStatusText">Wallet not connected</span>
+            </span>
+            <button class="btn primary" id="connectWalletBtn" type="button">Connect wallet</button>
+            <button class="btn hidden" id="disconnectWalletBtn" type="button">Disconnect</button>
+          </div>
+        </div>
         <div class="stats">
           <div class="stat"><span class="muted">Cash</span><b id="cash">—</b></div>
           <div class="stat"><span class="muted">Available</span><b id="available">—</b></div>
           <div class="stat"><span class="muted">Pending withdrawal</span><b id="pending">—</b></div>
         </div>
       </div>
+
+      <!-- Wallet Connection Drawer / Panel -->
+      <div class="panel hidden" id="walletConnectPanel">
+        <h2>Connect wallet</h2>
+        <p class="muted">Connect a browser wallet (e.g., EIP-1193 provider) or enter your wallet address manually so withdrawals can be routed accurately.</p>
+        <div class="grid-2">
+          <div class="stack">
+            <label>Browser Extension</label>
+            <button class="btn primary" id="browserWalletBtn" type="button">Connect Web3 Wallet</button>
+            <small class="muted" id="providerHint">Detects window.ethereum automatically if installed.</small>
+          </div>
+          <form id="manualWalletForm">
+            <div>
+              <label for="manualWalletNetwork">Network</label>
+              <select id="manualWalletNetwork">
+                <option value="ERC20">Ethereum (ERC-20)</option>
+                <option value="TRC20">TRON (TRC-20)</option>
+                <option value="SOL">Solana (SOL)</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+              </select>
+            </div>
+            <div>
+              <label for="manualWalletAddress">Wallet Address</label>
+              <input id="manualWalletAddress" placeholder="0x... or destination address" required>
+            </div>
+            <button class="btn" type="submit">Save &amp; Connect Address</button>
+          </form>
+        </div>
+        <p class="notice error hidden" id="walletError"></p>
+      </div>
+
+      <!-- Deposit & Withdraw Actions -->
+      <div class="panel">
+        <h2>Funds &amp; Transfers</h2>
+        <div class="tabs">
+          <button class="tab active" id="tabDeposit" type="button">Deposit</button>
+          <button class="tab" id="tabWithdraw" type="button">Withdraw</button>
+        </div>
+
+        <!-- Deposit Form -->
+        <form id="depositForm">
+          <div class="grid-2">
+            <div>
+              <label for="depositAmount">Deposit Amount (USD)</label>
+              <input id="depositAmount" type="number" min="1" step="0.01" placeholder="100.00" required>
+            </div>
+            <div>
+              <label for="depositMethod">Funding Method</label>
+              <select id="depositMethod">
+                <option value="crypto_wallet">Connected / External Crypto Wallet</option>
+                <option value="bank_wire">Bank Wire / ACH</option>
+                <option value="card">Debit / Credit Card</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="depositReference">Reference / Tx Hash (Optional)</label>
+            <input id="depositReference" placeholder="Transaction hash or transfer note">
+          </div>
+          <button class="btn primary" type="submit">Submit Deposit Request</button>
+        </form>
+
+        <!-- Withdraw Form -->
+        <form id="withdrawForm" class="hidden">
+          <div id="withdrawWalletGate" class="notice warn">
+            You must connect a destination wallet before submitting a withdrawal request.
+            <div style="margin-top: 10px;">
+              <button class="btn warn" id="gateConnectWalletBtn" type="button">Connect Wallet Now</button>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <label for="withdrawAmount">Withdrawal Amount (USD)</label>
+              <input id="withdrawAmount" type="number" min="1" step="0.01" placeholder="50.00" required>
+            </div>
+            <div>
+              <label for="withdrawNetwork">Destination Network</label>
+              <input id="withdrawNetwork" readonly value="Not connected">
+            </div>
+          </div>
+          <div>
+            <label for="withdrawWalletDisplay">Connected Destination Wallet</label>
+            <input id="withdrawWalletDisplay" readonly placeholder="Connect a wallet above to populate address" required>
+          </div>
+          <button class="btn primary" id="withdrawSubmitBtn" type="submit" disabled>Request Withdrawal</button>
+        </form>
+
+        <p class="notice hidden" id="actionNotice" aria-live="polite"></p>
+      </div>
+
+      <!-- Recent Activity -->
       <div class="panel">
         <h2>Recent activity</h2>
         <div id="activity"></div>
       </div>
     </section>
   </div>
+
   <script>
     const $ = id => document.getElementById(id);
+
+    let walletState = {
+      connected: false,
+      address: '',
+      network: '',
+      source: ''
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"]/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;'
+      }[c]));
+    }
+
     async function api(url, opt = {}) {
       const r = await fetch(url, {
         credentials: 'same-origin',
@@ -120,62 +391,318 @@
       if (!r.ok) throw new Error(data.error || 'Request failed');
       return data;
     }
+
     function money(n) {
       return Number(n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
     }
-    function showError(message) {
+
+    function showGateError(message) {
       const el = $('gateError');
       el.textContent = message;
       el.classList.remove('hidden');
     }
+
+    function clearGateError() {
+      const el = $('gateError');
+      el.textContent = '';
+      el.classList.add('hidden');
+    }
+
+    function showActionNotice(message, isError = false) {
+      const el = $('actionNotice');
+      el.textContent = message;
+      el.classList.toggle('error', isError);
+      el.classList.remove('hidden');
+    }
+
+    function clearActionNotice() {
+      const el = $('actionNotice');
+      el.textContent = '';
+      el.classList.remove('error');
+      el.classList.add('hidden');
+    }
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 12) return addr;
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    function renderWalletState() {
+      const dot = $('walletDot');
+      const statusText = $('walletStatusText');
+      const connectBtn = $('connectWalletBtn');
+      const disconnectBtn = $('disconnectWalletBtn');
+      const withdrawGate = $('withdrawWalletGate');
+      const withdrawAddr = $('withdrawWalletDisplay');
+      const withdrawNet = $('withdrawNetwork');
+      const withdrawSubmit = $('withdrawSubmitBtn');
+
+      if (walletState.connected && walletState.address) {
+        dot.classList.add('connected');
+        statusText.textContent = `${walletState.network}: ${shortAddr(walletState.address)}`;
+        connectBtn.textContent = 'Change wallet';
+        disconnectBtn.classList.remove('hidden');
+
+        withdrawGate.classList.add('hidden');
+        withdrawAddr.value = walletState.address;
+        withdrawNet.value = walletState.network;
+        withdrawSubmit.disabled = false;
+      } else {
+        dot.classList.remove('connected');
+        statusText.textContent = 'Wallet not connected';
+        connectBtn.textContent = 'Connect wallet';
+        disconnectBtn.classList.add('hidden');
+
+        withdrawGate.classList.remove('hidden');
+        withdrawAddr.value = '';
+        withdrawNet.value = 'Not connected';
+        withdrawSubmit.disabled = true;
+      }
+    }
+
+    async function persistWalletToServer(address, network, source) {
+      try {
+        await api('/api/wallet', {
+          method: 'POST',
+          body: JSON.stringify({ address, network, source })
+        });
+      } catch (_) {}
+    }
+
+    function setConnectedWallet(address, network, source) {
+      walletState = { connected: true, address: address.trim(), network, source };
+      localStorage.setItem('connected_wallet', JSON.stringify(walletState));
+      renderWalletState();
+      $('walletConnectPanel').classList.add('hidden');
+      $('walletError').classList.add('hidden');
+      persistWalletToServer(walletState.address, walletState.network, source);
+    }
+
+    function disconnectWallet() {
+      walletState = { connected: false, address: '', network: '', source: '' };
+      localStorage.removeItem('connected_wallet');
+      renderWalletState();
+    }
+
     $('tabLogin').onclick = () => {
+      clearGateError();
       $('tabLogin').classList.add('active');
       $('tabRegister').classList.remove('active');
       $('loginForm').classList.remove('hidden');
       $('registerForm').classList.add('hidden');
     };
     $('tabRegister').onclick = () => {
+      clearGateError();
       $('tabRegister').classList.add('active');
       $('tabLogin').classList.remove('active');
       $('registerForm').classList.remove('hidden');
       $('loginForm').classList.add('hidden');
     };
+
+    $('tabDeposit').onclick = () => {
+      clearActionNotice();
+      $('tabDeposit').classList.add('active');
+      $('tabWithdraw').classList.remove('active');
+      $('depositForm').classList.remove('hidden');
+      $('withdrawForm').classList.add('hidden');
+    };
+    $('tabWithdraw').onclick = () => {
+      clearActionNotice();
+      $('tabWithdraw').classList.add('active');
+      $('tabDeposit').classList.remove('active');
+      $('withdrawForm').classList.remove('hidden');
+      $('depositForm').classList.add('hidden');
+    };
+
+    $('connectWalletBtn').onclick = () => {
+      $('walletConnectPanel').classList.toggle('hidden');
+    };
+    $('gateConnectWalletBtn').onclick = () => {
+      $('walletConnectPanel').classList.remove('hidden');
+      $('walletConnectPanel').scrollIntoView({ behavior: 'smooth' });
+    };
+    $('disconnectWalletBtn').onclick = () => {
+      disconnectWallet();
+      showActionNotice('Wallet disconnected. Reconnect a wallet to enable withdrawals.');
+    };
+
+    $('browserWalletBtn').onclick = async () => {
+      const errEl = $('walletError');
+      errEl.classList.add('hidden');
+      if (!window.ethereum) {
+        errEl.textContent = 'No Web3 browser wallet detected. Please install a browser wallet or enter your address manually.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (!accounts || !accounts[0]) throw new Error('No account returned from wallet.');
+        setConnectedWallet(accounts[0], 'ERC20', 'web3');
+        showActionNotice('Web3 wallet connected: ' + shortAddr(accounts[0]));
+      } catch (err) {
+        errEl.textContent = err.message || 'Wallet connection rejected.';
+        errEl.classList.remove('hidden');
+      }
+    };
+
+    $('manualWalletForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const errEl = $('walletError');
+      errEl.classList.add('hidden');
+      const address = $('manualWalletAddress').value.trim();
+      const network = $('manualWalletNetwork').value;
+      if (address.length < 16) {
+        errEl.textContent = 'Please enter a valid wallet address.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      setConnectedWallet(address, network, 'manual');
+      showActionNotice(`Wallet saved (${network}: ${shortAddr(address)}).`);
+    });
+
+    $('depositForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearActionNotice();
+      const amount = Number($('depositAmount').value);
+      const method = $('depositMethod').value;
+      const reference = $('depositReference').value.trim();
+
+      if (!amount || amount <= 0) {
+        return showActionNotice('Enter a valid deposit amount.', true);
+      }
+
+      try {
+        await api('/api/deposit', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount,
+            method,
+            reference,
+            walletAddress: walletState.connected ? walletState.address : null
+          })
+        });
+        $('depositForm').reset();
+        showActionNotice(`Deposit request of ${money(amount)} submitted and pending settlement.`);
+        await openAccount();
+      } catch (err) {
+        showActionNotice(err.message, true);
+      }
+    });
+
+    $('withdrawForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearActionNotice();
+
+      if (!walletState.connected || !walletState.address) {
+        $('walletConnectPanel').classList.remove('hidden');
+        return showActionNotice('You must connect a wallet before withdrawing.', true);
+      }
+
+      const amount = Number($('withdrawAmount').value);
+      if (!amount || amount <= 0) {
+        return showActionNotice('Enter a valid withdrawal amount.', true);
+      }
+
+      try {
+        await api('/api/withdraw', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount,
+            walletAddress: walletState.address,
+            network: walletState.network
+          })
+        });
+        $('withdrawAmount').value = '';
+        showActionNotice(`Withdrawal request of ${money(amount)} to ${shortAddr(walletState.address)} submitted.`);
+        await openAccount();
+      } catch (err) {
+        showActionNotice(err.message, true);
+      }
+    });
+
     async function openAccount() {
       const me = await api('/api/me');
       if (!me.authenticated) return;
       const dash = await api('/api/dashboard');
+      clearGateError();
       $('gate').classList.add('hidden');
       $('account').classList.remove('hidden');
       $('logoutBtn').classList.remove('hidden');
       if (me.user.role === 'admin') $('adminLink').classList.remove('hidden');
+
       $('hello').textContent = me.user.name;
       $('who').textContent = me.user.email + ' · ' + me.user.accountNumber + (me.user.emailVerified ? '' : ' · email not verified');
       $('cash').textContent = money(dash.portfolio.cash);
       $('available').textContent = money(dash.portfolio.available);
       $('pending').textContent = money(dash.portfolio.pendingWithdrawal);
+
+      if (me.user.walletAddress) {
+        walletState = {
+          connected: true,
+          address: me.user.walletAddress,
+          network: me.user.walletNetwork || 'ERC20',
+          source: 'saved'
+        };
+      } else {
+        try {
+          const saved = JSON.parse(localStorage.getItem('connected_wallet') || 'null');
+          if (saved && saved.connected && saved.address) walletState = saved;
+        } catch (_) {}
+      }
+      renderWalletState();
+
       const rows = dash.activities || [];
-      $('activity').innerHTML = rows.length ? '<table><thead><tr><th>Activity</th><th>Status</th><th>Amount</th></tr></thead><tbody>' + rows.map(item => '<tr><td>' + String(item.activity).replace(/[&<>]/g, c => ({'&':'&','<':'<','>':'>'}[c])) + '</td><td>' + String(item.status).replace(/[&<>]/g, c => ({'&':'&','<':'<','>':'>'}[c])) + '</td><td>' + money(item.amount) + '</td></tr>').join('') + '</tbody></table>' : '<p class="muted">No activity yet.</p>';
+      $('activity').innerHTML = rows.length
+        ? '<table><thead><tr><th>Activity</th><th>Status</th><th>Amount</th></tr></thead><tbody>' +
+          rows.map(item =>
+            '<tr><td>' + escapeHtml(item.activity) +
+            '</td><td>' + escapeHtml(item.status) +
+            '</td><td>' + money(item.amount) + '</td></tr>'
+          ).join('') +
+          '</tbody></table>'
+        : '<p class="muted">No activity yet.</p>';
     }
+
     $('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      $('gateError').classList.add('hidden');
+      clearGateError();
       try {
-        await api('/api/login', { method: 'POST', body: JSON.stringify({ email: $('loginEmail').value, password: $('loginPassword').value }) });
+        await api('/api/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: $('loginEmail').value,
+            password: $('loginPassword').value
+          })
+        });
         await openAccount();
-      } catch (err) { showError(err.message); }
+      } catch (err) {
+        showGateError(err.message);
+      }
     });
+
     $('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      $('gateError').classList.add('hidden');
+      clearGateError();
       try {
-        await api('/api/register', { method: 'POST', body: JSON.stringify({ name: $('regName').value, email: $('regEmail').value, password: $('regPassword').value }) });
+        await api('/api/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: $('regName').value,
+            email: $('regEmail').value,
+            password: $('regPassword').value
+          })
+        });
         await openAccount();
-      } catch (err) { showError(err.message); }
+      } catch (err) {
+        showGateError(err.message);
+      }
     });
+
     $('logoutBtn').addEventListener('click', async () => {
       try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
       location.href = '/dashboard/apps';
     });
+
     openAccount().catch(() => {});
   </script>
 </body>
