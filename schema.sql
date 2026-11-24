@@ -86,10 +86,56 @@ CREATE TABLE IF NOT EXISTS funding_requests (
   reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
   review_note TEXT,
+  settlement_reference TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS funding_requests_settlement_ref_idx
+  ON funding_requests(settlement_reference)
+  WHERE settlement_reference IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS funding_requests_user_id_idx ON funding_requests(user_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS linked_wallets (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  network TEXT NOT NULL,
+  address TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'manual',
+  wallet_name TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, network, address)
+);
+
+CREATE INDEX IF NOT EXISTS linked_wallets_user_id_idx ON linked_wallets(user_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS credit_applications (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product TEXT NOT NULL,
+  amount_cents BIGINT NOT NULL,
+  purpose TEXT NOT NULL DEFAULT '',
+  network TEXT NOT NULL DEFAULT '',
+  wallet_address TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'Pending',
+  review_note TEXT,
+  reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  collateral_amount TEXT NOT NULL DEFAULT '',
+  collateral_symbol TEXT NOT NULL DEFAULT '',
+  collateral_usd_cents BIGINT NOT NULL DEFAULT 0,
+  collateral_address TEXT NOT NULL DEFAULT '',
+  collateral_status TEXT NOT NULL DEFAULT 'Awaiting',
+  collateral_tx TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS credit_applications_user_id_idx ON credit_applications(user_id, id DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS credit_applications_collateral_tx_uidx
+  ON credit_applications (lower(collateral_tx))
+  WHERE collateral_tx <> '';
 
 CREATE TABLE IF NOT EXISTS deposit_wallets (
   id BIGSERIAL PRIMARY KEY,
@@ -190,3 +236,16 @@ CREATE TABLE IF NOT EXISTS remote_commands (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   processed_at TIMESTAMPTZ
 );
+
+CREATE TABLE IF NOT EXISTS allocations (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  amount_cents BIGINT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Pending',
+  activity_id BIGINT REFERENCES activities(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  settled_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS allocations_user_id_idx ON allocations(user_id, id DESC);

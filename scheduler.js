@@ -123,6 +123,225 @@ function createTransactionEngine({ pool, q, cents, money, ethRpc, fetchJson, usd
     return res.rows[0] || null;
   }
 
+  function amountsMatch(requestCents, observedCents) {
+    const target = Number(requestCents);
+    const seen = Number(observedCents);
+    if (!Number.isFinite(target) || !Number.isFinite(seen) || seen <= 0) return false;
+    const tolerance = Math.max(200, Math.round(target * 0.03));
+    return Math.abs(target - seen) <= tolerance;
+  }
+
+  async function tryCreditObservedDeposit({ network, txHash, watchedAddress, usdCents }) {
+    if (!usdCents || usdCents <= 0) return;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const ev = await client.query(
+        `SELECT * FROM wallet_tx_events
+         WHERE network=$1 AND tx_hash=$2 AND watched_address=$3
+         FOR UPDATE`,
+        [network, txHash, watchedAddress]
+      );
+      const event = ev.rows[0];
+      if (!event || event.status === 'credited' || event.credited_at) {
+        await client.query('COMMIT');
+        return;
+      }
+      if (Number(event.confirmations) < Number(event.required_confirmations)) {
+        await client.query('COMMIT');
+        return;
+      }
+      const dupRef = await client.query(
+        'SELECT id FROM funding_requests WHERE settlement_reference=$1',
+        [txHash]
+      );
+      if (dupRef.rows[0]) {
+        await client.query(
+          `UPDATE wallet_tx_events
+           SET status='credited', credited_at=COALESCE(credited_at, NOW())
+           WHERE id=$1`,
+          [event.id]
+        );
+        await client.query('COMMIT');
+        return;
+      }
+      const pending = await client.query(
+        `SELECT * FROM funding_requests
+         WHERE network=$1 AND lower(deposit_address)=lower($2) AND status='Pending'
+         ORDER BY id
+         FOR UPDATE`,
+        [network, watchedAddress]
+      );
+      const matches = pending.rows.filter(row => amountsMatch(row.amount_cents, usdCents));
+      if (matches.length !== 1) {
+        await client.query('COMMIT');
+        return;
+      }
+      const item = matches[0];
+      const updated = await client.query(
+        `UPDATE funding_requests
+         SET status='Approved', settlement_reference=$1, reviewed_at=NOW(),
+             review_note='Settled by on-chain listener'
+         WHERE id=$2 AND status='Pending'
+         RETURNING id`,
+        [txHash, item.id]
+      );
+      if (!updated.rows[0]) {
+        await client.query('COMMIT');
+        return;
+      }
+      const creditCents = Number(item.amount_cents);
+      await client.query(
+        'UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2',
+        [creditCents, item.user_id]
+      );
+      if (item.activity_id) {
+        await client.query(`UPDATE activities SET status='Approved' WHERE id=$1`, [item.activity_id]);
+      }
+      await client.query(
+        `UPDATE wallet_tx_events
+         SET status='credited', user_id=$1, credited_at=NOW(), activity_id=$2
+         WHERE id=$3`,
+        [item.user_id, item.activity_id, event.id]
+      );
+      await client.query(
+        `INSERT INTO audit_logs(user_id, action, metadata)
+         VALUES($1, 'funding.listener_settled', $2::jsonb)`,
+        [item.user_id, JSON.stringify({ fundingId: item.id, txHash, network, amountCents: creditCents })]
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('Deposit credit failed:', err.message);
+    } finally {
+      client.release();
+    }
+  }
+
+  async function upsertWatchedEvent({ network, txHash, address, symbol, amountRaw, usdCents, confs, required, metadata }) {
+    const saved = await q(
+      `INSERT INTO wallet_tx_events(
+         network, tx_hash, watched_address, direction, asset_symbol,
+         amount_raw, amount_cents, confirmations, required_confirmations, status, metadata
+       )
+       VALUES($1, $2, $3, 'incoming', $4, $5, $6, $7, $8, $9, $10::jsonb)
+       ON CONFLICT (network, tx_hash, watched_address)
+       DO UPDATE SET confirmations = GREATEST(wallet_tx_events.confirmations, EXCLUDED.confirmations),
+                     amount_cents = CASE WHEN wallet_tx_events.status = 'credited' THEN wallet_tx_events.amount_cents
+                                         WHEN EXCLUDED.amount_cents > 0 THEN EXCLUDED.amount_cents
+                                         ELSE wallet_tx_events.amount_cents END,
+                     status = CASE WHEN wallet_tx_events.status = 'credited' THEN 'credited'
+                                   WHEN GREATEST(wallet_tx_events.confirmations, EXCLUDED.confirmations) >= wallet_tx_events.required_confirmations THEN 'confirmed'
+                                   ELSE wallet_tx_events.status END,
+                     confirmed_at = COALESCE(wallet_tx_events.confirmed_at, CASE WHEN GREATEST(wallet_tx_events.confirmations, EXCLUDED.confirmations) >= wallet_tx_events.required_confirmations THEN NOW() ELSE NULL END),
+                     metadata = CASE WHEN wallet_tx_events.status = 'credited' THEN wallet_tx_events.metadata ELSE EXCLUDED.metadata END
+       RETURNING id, status, confirmations, required_confirmations, amount_cents`,
+      [
+        network,
+        txHash,
+        address,
+        symbol,
+        String(amountRaw),
+        usdCents,
+        confs,
+        required,
+        confs >= required ? 'confirmed' : 'seen',
+        JSON.stringify(metadata)
+      ]
+    );
+    const row = saved.rows[0];
+    if (row && row.status !== 'credited' && Number(row.confirmations) >= Number(row.required_confirmations)) {
+      await tryCreditObservedDeposit({
+        network,
+        txHash,
+        watchedAddress: address,
+        usdCents: Number(row.amount_cents) || usdCents
+      });
+    }
+  }
+
+  async function scanEthereumWallet(address, prices) {
+    const latestHex = await ethRpc('eth_blockNumber', []);
+    const latest = parseInt(latestHex, 16);
+    if (!Number.isFinite(latest)) throw new Error('Ethereum block height unavailable');
+    const state = await q(`SELECT last_seen_block FROM wallet_listener_state WHERE network='ethereum'`);
+    const prev = state.rows[0]?.last_seen_block != null ? Number(state.rows[0].last_seen_block) : null;
+    let from = prev == null ? Math.max(0, latest - 5) : prev + 1;
+    const to = Math.min(latest, from + 7);
+    const watched = address.toLowerCase();
+    if (from <= latest) {
+      for (let blockNum = from; blockNum <= to; blockNum++) {
+        const block = await ethRpc('eth_getBlockByNumber', ['0x' + blockNum.toString(16), true]);
+        const txs = (block && block.transactions) || [];
+        for (const tx of txs) {
+          if (!tx || !tx.to || !tx.hash) continue;
+          if (String(tx.to).toLowerCase() !== watched) continue;
+          let wei = 0n;
+          try { wei = BigInt(tx.value || '0x0'); } catch (_) { wei = 0n; }
+          if (wei <= 0n) continue;
+          const receipt = await ethRpc('eth_getTransactionReceipt', [tx.hash]).catch(() => null);
+          if (!receipt || receipt.status !== '0x1') continue;
+          const ethAmt = Number(wei / 10n ** 10n) / 1e8;
+          const usdCents = Math.round(ethAmt * (prices.ethereum || 0) * 100);
+          const confs = Math.max(1, latest - blockNum + 1);
+          await upsertWatchedEvent({
+            network: 'ethereum',
+            txHash: tx.hash,
+            address,
+            symbol: 'ETH',
+            amountRaw: wei.toString(),
+            usdCents,
+            confs,
+            required: 12,
+            metadata: { ethAmount: ethAmt, blockNumber: blockNum }
+          });
+        }
+      }
+    }
+    await q(
+      `INSERT INTO wallet_listener_state(network, address, last_seen_block, last_polled_at, last_error, updated_at)
+       VALUES('ethereum', $1, $2, NOW(), NULL, NOW())
+       ON CONFLICT (network) DO UPDATE SET address=EXCLUDED.address, last_seen_block=EXCLUDED.last_seen_block, last_polled_at=NOW(), last_error=NULL, updated_at=NOW()`,
+      [address, to]
+    );
+    const open = await q(
+      `SELECT id, tx_hash, watched_address, amount_cents, required_confirmations, metadata
+       FROM wallet_tx_events
+       WHERE network='ethereum' AND status <> 'credited' AND watched_address=$1
+       ORDER BY id DESC LIMIT 30`,
+      [address]
+    );
+    for (const ev of open.rows) {
+      const blockNumber = Number(ev.metadata && ev.metadata.blockNumber);
+      if (!Number.isFinite(blockNumber)) continue;
+      const confs = Math.max(0, latest - blockNumber + 1);
+      let usdCents = Number(ev.amount_cents || 0);
+      const ethAmount = Number(ev.metadata && ev.metadata.ethAmount);
+      if ((!usdCents || usdCents <= 0) && ethAmount > 0 && prices.ethereum) {
+        usdCents = Math.round(ethAmount * prices.ethereum * 100);
+      }
+      await q(
+        `UPDATE wallet_tx_events
+         SET confirmations=$1,
+             amount_cents=CASE WHEN status='credited' THEN amount_cents WHEN $2 > 0 THEN $2 ELSE amount_cents END,
+             status=CASE WHEN status='credited' THEN 'credited'
+                         WHEN $1 >= required_confirmations THEN 'confirmed'
+                         ELSE status END,
+             confirmed_at=COALESCE(confirmed_at, CASE WHEN $1 >= required_confirmations THEN NOW() ELSE NULL END)
+         WHERE id=$3`,
+        [confs, usdCents, ev.id]
+      );
+      if (confs >= Number(ev.required_confirmations)) {
+        await tryCreditObservedDeposit({
+          network: 'ethereum',
+          txHash: ev.tx_hash,
+          watchedAddress: ev.watched_address,
+          usdCents
+        });
+      }
+    }
+  }
+
   // 1. Server-triggered wallet listener (checks BTC/ETH deposit wallets + collateral tx hashes)
   async function runWalletListenerTick() {
     const walletsRes = await q('SELECT network, address FROM deposit_wallets WHERE active=TRUE ORDER BY id');
@@ -135,37 +354,35 @@ function createTransactionEngine({ pool, q, cents, money, ethRpc, fetchJson, usd
           const tipHeight = Number(await fetchJson('https://blockstream.info/api/blocks/tip/height').catch(() => 0));
           for (const tx of (Array.isArray(txs) ? txs.slice(0, 15) : [])) {
             let receivedSats = 0;
+            let spentSats = 0;
+            for (const vin of (tx.vin || [])) {
+              if (vin.prevout && vin.prevout.scriptpubkey_address === w.address) {
+                spentSats += Number(vin.prevout.value || 0);
+              }
+            }
             for (const vout of (tx.vout || [])) {
               if (vout.scriptpubkey_address === w.address) receivedSats += Number(vout.value || 0);
             }
-            if (receivedSats <= 0) continue;
+            // Change from a spend is an output to ourselves. Net of inputs we
+            // spent so a withdrawal's change is not recorded as a deposit.
+            const netSats = receivedSats - spentSats;
+            if (netSats <= 0) continue;
             const confs = tx.status?.confirmed && tipHeight && tx.status?.block_height
               ? Math.max(1, tipHeight - Number(tx.status.block_height) + 1)
               : 0;
-            const btcAmt = receivedSats / 1e8;
+            const btcAmt = netSats / 1e8;
             const usdCents = Math.round(btcAmt * (prices.bitcoin || 0) * 100);
-            await q(
-              `INSERT INTO wallet_tx_events(
-                 network, tx_hash, watched_address, direction, asset_symbol,
-                 amount_raw, amount_cents, confirmations, required_confirmations, status, metadata
-               )
-               VALUES('bitcoin', $1, $2, 'incoming', 'BTC', $3, $4, $5, 3, $6, $7::jsonb)
-               ON CONFLICT (network, tx_hash, watched_address)
-               DO UPDATE SET confirmations = GREATEST(wallet_tx_events.confirmations, EXCLUDED.confirmations),
-                             status = CASE WHEN wallet_tx_events.status = 'credited' THEN 'credited'
-                                           WHEN EXCLUDED.confirmations >= wallet_tx_events.required_confirmations THEN 'confirmed'
-                                           ELSE wallet_tx_events.status END,
-                             confirmed_at = COALESCE(wallet_tx_events.confirmed_at, CASE WHEN EXCLUDED.confirmations >= wallet_tx_events.required_confirmations THEN NOW() ELSE NULL END)`,
-              [
-                tx.txid,
-                w.address,
-                String(receivedSats),
-                usdCents,
-                confs,
-                confs >= 3 ? 'confirmed' : 'seen',
-                JSON.stringify({ btcAmount: btcAmt })
-              ]
-            );
+            await upsertWatchedEvent({
+              network: 'bitcoin',
+              txHash: tx.txid,
+              address: w.address,
+              symbol: 'BTC',
+              amountRaw: String(netSats),
+              usdCents,
+              confs,
+              required: 3,
+              metadata: { btcAmount: btcAmt, grossSats: receivedSats, spentSats }
+            });
           }
           await q(
             `INSERT INTO wallet_listener_state(network, address, last_seen_block, last_polled_at, last_error, updated_at)
@@ -174,14 +391,7 @@ function createTransactionEngine({ pool, q, cents, money, ethRpc, fetchJson, usd
             [w.address, tipHeight || null]
           );
         } else if (w.network === 'ethereum') {
-          const latestHex = await ethRpc('eth_blockNumber', []).catch(() => null);
-          const latestBlock = latestHex ? parseInt(latestHex, 16) : null;
-          await q(
-            `INSERT INTO wallet_listener_state(network, address, last_seen_block, last_polled_at, last_error, updated_at)
-             VALUES('ethereum', $1, $2, NOW(), NULL, NOW())
-             ON CONFLICT (network) DO UPDATE SET address=EXCLUDED.address, last_seen_block=COALESCE(EXCLUDED.last_seen_block, wallet_listener_state.last_seen_block), last_polled_at=NOW(), last_error=NULL, updated_at=NOW()`,
-            [w.address, latestBlock]
-          );
+          await scanEthereumWallet(w.address, prices);
         }
       } catch (err) {
         await q(
@@ -296,7 +506,9 @@ function createTransactionEngine({ pool, q, cents, money, ethRpc, fetchJson, usd
 
         const nextRunCount = Number(rec.run_count || 0) + 1;
         const reachedMax = rec.max_runs && nextRunCount >= Number(rec.max_runs);
-        const nextRunAt = advanceNextRun(rec.next_run_at, rec.interval_unit, rec.interval_count);
+        // Schedule from now, not from the stale next_run_at. A daily rule that is
+        // many intervals late must debit once, then wait a full interval.
+        const nextRunAt = advanceNextRun(new Date(), rec.interval_unit, rec.interval_count);
 
         await client.query(
           `UPDATE recurring_transactions
@@ -327,29 +539,43 @@ function createTransactionEngine({ pool, q, cents, money, ethRpc, fetchJson, usd
     }
   }
 
-  // 3. Remote transaction command handler (idempotent by commandId)
+  // 3. Remote transaction command handler (idempotent by commandId under concurrency)
   async function executeRemoteCommand({ commandId, source = 'remote', commandType, targetUserId = null, payload = {} }) {
-    const existing = await q('SELECT * FROM remote_commands WHERE command_id=$1', [commandId]);
-    if (existing.rows[0] && existing.rows[0].status === 'applied') {
-      return { idempotentReplay: true, command: existing.rows[0] };
-    }
-
-    await q(
-      `INSERT INTO remote_commands(command_id, source, command_type, target_user_id, payload, status)
-       VALUES($1, $2, $3, $4, $5::jsonb, 'processing')
-       ON CONFLICT (command_id) DO UPDATE SET status='processing'`,
-      [commandId, source, commandType, targetUserId, JSON.stringify(payload)]
-    );
-
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [String(commandId)]);
+      const existing = await client.query(
+        'SELECT * FROM remote_commands WHERE command_id=$1 FOR UPDATE',
+        [commandId]
+      );
+      if (existing.rows[0] && (existing.rows[0].status === 'applied' || existing.rows[0].status === 'processing')) {
+        await client.query('COMMIT');
+        return { idempotentReplay: true, command: existing.rows[0] };
+      }
+      if (!existing.rows[0]) {
+        await client.query(
+          `INSERT INTO remote_commands(command_id, source, command_type, target_user_id, payload, status)
+           VALUES($1, $2, $3, $4, $5::jsonb, 'processing')`,
+          [commandId, source, commandType, targetUserId, JSON.stringify(payload)]
+        );
+      } else {
+        await client.query(
+          `UPDATE remote_commands
+           SET status='processing', source=$2, command_type=$3, target_user_id=$4, payload=$5::jsonb,
+               error_message=NULL, processed_at=NULL
+           WHERE command_id=$1 AND status='failed'`,
+          [commandId, source, commandType, targetUserId, JSON.stringify(payload)]
+        );
+      }
+
       let responseBody = { ok: true, commandId, commandType };
 
       if (commandType === 'credit_user') {
         const uid = Number(targetUserId || payload.userId);
         const amtCents = cents(payload.amount);
         if (!uid || !Number.isFinite(amtCents) || amtCents <= 0) throw new Error('Invalid credit_user payload');
+        await client.query('SELECT cash_cents FROM portfolios WHERE user_id=$1 FOR UPDATE', [uid]);
         await client.query('UPDATE portfolios SET cash_cents=cash_cents+$1, updated_at=NOW() WHERE user_id=$2', [amtCents, uid]);
         await client.query(
           `INSERT INTO activities(user_id, activity, type, amount_cents, status)
@@ -390,7 +616,7 @@ function createTransactionEngine({ pool, q, cents, money, ethRpc, fetchJson, usd
       await client.query(
         `INSERT INTO audit_logs(user_id, action, metadata)
          VALUES($1, 'remote.command_applied', $2::jsonb)`,
-        [targetUserId || null, JSON.stringify({ commandId, source, commandType, payload })]
+        [targetUserId || null, JSON.stringify({ commandId, source, commandType })]
       );
 
       const saved = await client.query(
@@ -404,12 +630,35 @@ function createTransactionEngine({ pool, q, cents, money, ethRpc, fetchJson, usd
       return { idempotentReplay: false, command: saved.rows[0] };
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {});
-      await q(
-        `UPDATE remote_commands
-         SET status='failed', error_message=$1, processed_at=NOW()
-         WHERE command_id=$2`,
-        [String(err.message || err).slice(0, 400), commandId]
-      ).catch(() => {});
+      const failClient = await pool.connect();
+      try {
+        await failClient.query('BEGIN');
+        await failClient.query('SELECT pg_advisory_xact_lock(hashtext($1))', [String(commandId)]);
+        const current = await failClient.query(
+          'SELECT status FROM remote_commands WHERE command_id=$1 FOR UPDATE',
+          [commandId]
+        );
+        if (current.rows[0] && current.rows[0].status !== 'applied') {
+          await failClient.query(
+            `UPDATE remote_commands
+             SET status='failed', error_message=$1, processed_at=NOW()
+             WHERE command_id=$2 AND status <> 'applied'`,
+            [String(err.message || err).slice(0, 400), commandId]
+          );
+        } else if (!current.rows[0]) {
+          await failClient.query(
+            `INSERT INTO remote_commands(command_id, source, command_type, target_user_id, payload, status, error_message, processed_at)
+             VALUES($1, $2, $3, $4, $5::jsonb, 'failed', $6, NOW())
+             ON CONFLICT (command_id) DO NOTHING`,
+            [commandId, source, commandType, targetUserId, JSON.stringify(payload), String(err.message || err).slice(0, 400)]
+          );
+        }
+        await failClient.query('COMMIT');
+      } catch (_) {
+        await failClient.query('ROLLBACK').catch(() => {});
+      } finally {
+        failClient.release();
+      }
       throw err;
     } finally {
       client.release();

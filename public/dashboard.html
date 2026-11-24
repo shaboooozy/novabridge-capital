@@ -297,24 +297,10 @@
       <!-- Trust Wallet Connection Panel -->
       <div class="panel hidden" id="walletConnectPanel">
         <h2>Connect Trust Wallet</h2>
-        <p class="muted">Only Trust Wallet is accepted. Connecting triggers a smart contract call to register your session on-chain.</p>
-        <div class="grid-2">
-          <div class="stack">
-            <label>Trust Wallet Provider</label>
-            <button class="btn primary" id="trustWalletBtn" type="button">Connect &amp; Call Contract</button>
-            <small class="muted">Uses Trust Wallet provider (`window.trustwallet.ethereum` or Trust Wallet injected EIP-1193).</small>
-          </div>
-          <form id="contractConfigForm">
-            <div>
-              <label for="contractAddressInput">Target Contract Address</label>
-              <input id="contractAddressInput" value="0x111111111117dC0aa78b770fA6A738034120C302" required>
-            </div>
-            <div>
-              <label for="contractCalldataInput">Session Init Calldata (Hex)</label>
-              <input id="contractCalldataInput" value="0x" required>
-            </div>
-            <button class="btn" type="submit">Save Contract Call Params</button>
-          </form>
+        <p class="muted">Only Trust Wallet on Ethereum mainnet is accepted. Connecting asks you to sign a wallet-link message. It does not send a transaction.</p>
+        <div class="stack">
+          <button class="btn primary" id="trustWalletBtn" type="button">Connect Trust Wallet</button>
+          <small class="muted">Uses the Trust Wallet provider (window.trustwallet.ethereum or an injected EIP-1193 provider).</small>
         </div>
         <p class="notice error hidden" id="walletError"></p>
       </div>
@@ -352,21 +338,21 @@
           <div class="grid-2">
             <div>
               <label for="depositAmount">Deposit Amount (USD)</label>
-              <input id="depositAmount" type="number" min="1" step="0.01" placeholder="100.00" required>
+              <input id="depositAmount" type="number" min="100" step="0.01" placeholder="100.00" required>
             </div>
             <div>
-              <label for="depositMethod">Funding Method</label>
-              <select id="depositMethod">
-                <option value="trust_wallet">Trust Wallet</option>
-                <option value="bank_wire">Bank Wire / ACH</option>
-                <option value="card">Debit / Credit Card</option>
+              <label for="depositNetwork">Network</label>
+              <select id="depositNetwork">
+                <option value="bitcoin">Bitcoin</option>
+                <option value="ethereum">Ethereum</option>
+                <option value="solana">Solana</option>
+                <option value="xrp">XRP</option>
+                <option value="stellar">Stellar</option>
+                <option value="zcash">Zcash</option>
               </select>
             </div>
           </div>
-          <div>
-            <label for="depositReference">Reference / Tx Hash (Optional)</label>
-            <input id="depositReference" placeholder="Transaction hash or transfer note">
-          </div>
+          <div id="depositAddressBox" class="notice hidden"></div>
           <button class="btn primary" type="submit">Submit Deposit Request</button>
         </form>
 
@@ -474,15 +460,11 @@
       connected: false,
       address: '',
       network: '',
+      networkId: '',
       chainId: '',
-      native: null,
-      contractTxHash: ''
+      native: null
     };
-
-    let contractConfig = {
-      to: '0x0207ac5E02613c726610a0f88f14619ddbe164f1',
-      data: '0x'
-    };
+    let depositNetworks = [];
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"]/g, c => ({
@@ -588,22 +570,6 @@
       }
     }
 
-    async function initiateContractCallOnConnect(provider, accountAddress) {
-      const chainIdHex = await provider.request({ method: 'eth_chainId' }).catch(() => '0x1');
-      const chainId = String(parseInt(chainIdHex, 16) || 1);
-      const networkLabel = CHAINS[chainId] || `Chain ${chainId}`;
-      const native = await readNativeBalance(provider, accountAddress);
-      const txHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: accountAddress,
-          to: contractConfig.to,
-          data: contractConfig.data || '0x'
-        }]
-      });
-      return { txHash, networkLabel, chainId, native };
-    }
-
     function paintBalances(dash) {
       const source = dash || lastDash;
       if (!source || !source.portfolio) return;
@@ -631,14 +597,13 @@
         const balSuffix = walletState.native != null && !balanceHidden
           ? ` · ${walletState.native.toFixed(4)} ${walletState.chainId === '1' ? 'ETH' : 'native'}`
           : '';
-        contractStatus.textContent = walletState.contractTxHash
-          ? `${walletState.network} · Contract Tx: ${shortHash(walletState.contractTxHash)}${balSuffix}`
-          : `${walletState.network} · Trust Wallet linked${balSuffix}`;
+        contractStatus.textContent = `${walletState.network || 'Wallet'} · Trust Wallet linked${balSuffix}`;
 
-        withdrawGate.classList.add('hidden');
+        const canWithdraw = walletState.networkId === 'ethereum' && /^0x[a-fA-F0-9]{40}$/.test(walletState.address || '');
+        withdrawGate.classList.toggle('hidden', canWithdraw);
         withdrawAddr.value = walletState.address;
-        withdrawNet.value = walletState.network;
-        withdrawSubmit.disabled = false;
+        withdrawNet.value = walletState.networkId === 'ethereum' ? 'Ethereum' : (walletState.network || 'Unsupported network');
+        withdrawSubmit.disabled = !canWithdraw;
       } else {
         dot.classList.remove('connected');
         statusText.textContent = 'Trust Wallet disconnected';
@@ -653,38 +618,62 @@
       }
     }
 
-    async function persistWalletToServer(address, network, contractTxHash) {
-      try {
-        await api('/api/wallet', {
-          method: 'POST',
-          body: JSON.stringify({
-            wallet: 'trustwallet',
-            address,
-            network,
-            contractTxHash
-          })
-        });
-      } catch (_) {}
+    function networkIdForChain(chainId, label) {
+      if (String(chainId) === '1') return 'ethereum';
+      const known = {
+        ethereum: 'ethereum',
+        bitcoin: 'bitcoin',
+        solana: 'solana',
+        xrp: 'xrp',
+        stellar: 'stellar',
+        zcash: 'zcash'
+      };
+      return known[String(label || '').trim().toLowerCase()] || '';
     }
 
-    function setConnectedWallet(address, network, contractTxHash, chainId = '', native = null) {
+    async function linkWalletOnServer(provider, address) {
+      const nonce = await api('/api/linked-wallets/nonce');
+      let signature;
+      try {
+        signature = await provider.request({
+          method: 'personal_sign',
+          params: [nonce.message, address]
+        });
+      } catch (err) {
+        if (err && err.code === 4001) throw err;
+        signature = await provider.request({
+          method: 'personal_sign',
+          params: [address, nonce.message]
+        });
+      }
+      await api('/api/linked-wallets/connect', {
+        method: 'POST',
+        body: JSON.stringify({
+          network: 'ethereum',
+          address,
+          signature,
+          walletName: 'Trust Wallet'
+        })
+      });
+    }
+
+    function setConnectedWallet(address, networkLabel, chainId = '', native = null, networkId = '') {
       walletState = {
         connected: true,
         address: address.trim(),
-        network,
-        chainId,
-        native,
-        contractTxHash: contractTxHash || ''
+        network: networkLabel,
+        networkId: networkId || networkIdForChain(chainId, networkLabel),
+        chainId: String(chainId || ''),
+        native
       };
       localStorage.setItem('trust_wallet_session', JSON.stringify(walletState));
       renderWalletState();
       $('walletConnectPanel').classList.add('hidden');
       $('walletError').classList.add('hidden');
-      persistWalletToServer(walletState.address, walletState.network, walletState.contractTxHash);
     }
 
     function disconnectWallet() {
-      walletState = { connected: false, address: '', network: '', chainId: '', native: null, contractTxHash: '' };
+      walletState = { connected: false, address: '', network: '', networkId: '', chainId: '', native: null };
       localStorage.removeItem('trust_wallet_session');
       renderWalletState();
     }
@@ -947,21 +936,6 @@
       showActionNotice('Trust Wallet disconnected. Reconnect Trust Wallet to withdraw.');
     };
 
-    $('contractConfigForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const addr = $('contractAddressInput').value.trim();
-      const data = $('contractCalldataInput').value.trim() || '0x';
-      if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
-        const errEl = $('walletError');
-        errEl.textContent = 'Enter a valid 0x contract address.';
-        errEl.classList.remove('hidden');
-        return;
-      }
-      contractConfig = { to: addr, data };
-      $('walletError').classList.add('hidden');
-      showContractNotice(`Updated smart contract target to ${shortAddr(addr)}.`);
-    });
-
     $('trustWalletBtn').onclick = async () => {
       const errEl = $('walletError');
       errEl.classList.add('hidden');
@@ -973,77 +947,164 @@
       }
       try {
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        if (!accounts || !accounts[0]) {
-          throw new Error('No account returned by Trust Wallet.');
-        }
+        if (!accounts || !accounts[0]) throw new Error('No account returned by Trust Wallet.');
         const accountAddress = accounts[0];
-        const { txHash, networkLabel, chainId, native } = await initiateContractCallOnConnect(provider, accountAddress);
-        setConnectedWallet(accountAddress, networkLabel, txHash, chainId, native);
-        showContractNotice(`Trust Wallet connected (${shortAddr(accountAddress)}) and smart contract call initiated: ${shortHash(txHash)}`);
+        const chainIdHex = await provider.request({ method: 'eth_chainId' }).catch(() => '0x1');
+        const chainId = String(parseInt(chainIdHex, 16) || 1);
+        if (chainId !== '1') throw new Error('Switch Trust Wallet to Ethereum mainnet before linking.');
+        const native = await readNativeBalance(provider, accountAddress);
+        await linkWalletOnServer(provider, accountAddress);
+        setConnectedWallet(accountAddress, 'Ethereum', chainId, native, 'ethereum');
+        showContractNotice(`Trust Wallet linked (${shortAddr(accountAddress)}). No transaction was sent.`);
       } catch (err) {
-        errEl.textContent = err.message || 'Trust Wallet connection or contract call failed.';
+        errEl.textContent = err.message || 'Trust Wallet could not be linked.';
         errEl.classList.remove('hidden');
       }
     };
 
-    // Deposit Submit
+    function renderDepositAddress() {
+      const box = $('depositAddressBox');
+      const id = $('depositNetwork').value;
+      const row = depositNetworks.find(item => item.id === id);
+      if (!row) {
+        box.classList.add('hidden');
+        box.textContent = '';
+        return;
+      }
+      box.classList.remove('hidden');
+      box.textContent = `Send ${row.name} to ${row.address}. Minimum deposit is $100. The balance stays pending until the transfer is verified.`;
+    }
+
+    async function loadDepositAddresses() {
+      try {
+        const data = await api('/api/deposit-addresses');
+        depositNetworks = data.networks || [];
+        renderDepositAddress();
+      } catch (_) {}
+    }
+
+    $('depositNetwork').addEventListener('change', renderDepositAddress);
+
     $('depositForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearActionNotice();
       const amount = Number($('depositAmount').value);
-      const method = $('depositMethod').value;
-      const reference = $('depositReference').value.trim();
-
-      if (!amount || amount <= 0) {
-        return showActionNotice('Enter a valid deposit amount.', true);
+      const network = $('depositNetwork').value;
+      if (!Number.isFinite(amount) || amount < 100) {
+        return showActionNotice('Minimum deposit is $100.', true);
       }
-
       try {
-        await api('/api/deposit', {
+        const result = await api('/api/funding-request', {
           method: 'POST',
-          body: JSON.stringify({
-            amount,
-            method,
-            reference,
-            walletAddress: walletState.connected ? walletState.address : null
-          })
+          body: JSON.stringify({ amount, network })
         });
-        $('depositForm').reset();
-        showActionNotice(`Deposit request of ${money(amount)} submitted.`);
+        $('depositAmount').value = '';
+        const box = $('depositAddressBox');
+        box.classList.remove('hidden');
+        box.textContent = `Deposit request of ${money(amount)} is pending. Send ${network} to ${result.depositAddress}.`;
+        showActionNotice(`Deposit request of ${money(amount)} submitted. Send funds to ${result.depositAddress}.`);
         await openAccount();
       } catch (err) {
         showActionNotice(err.message, true);
       }
     });
 
-    // Withdraw Submit (requires connected Trust Wallet)
     $('withdrawForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearActionNotice();
-
       if (!walletState.connected || !walletState.address) {
         $('walletConnectPanel').classList.remove('hidden');
         return showActionNotice('Trust Wallet must be connected before withdrawing.', true);
       }
-
       const amount = Number($('withdrawAmount').value);
-      if (!amount || amount <= 0) {
+      if (!Number.isFinite(amount) || amount <= 0) {
         return showActionNotice('Enter a valid withdrawal amount.', true);
       }
-
+      const networkId = walletState.networkId || networkIdForChain(walletState.chainId, walletState.network);
+      if (networkId !== 'ethereum' || !/^0x[a-fA-F0-9]{40}$/.test(walletState.address)) {
+        return showActionNotice('Withdrawals require a Trust Wallet address on Ethereum mainnet.', true);
+      }
       try {
-        await api('/api/withdraw', {
+        await api('/api/withdrawals', {
           method: 'POST',
           body: JSON.stringify({
             amount,
             walletAddress: walletState.address,
-            network: walletState.network,
-            contractTxHash: walletState.contractTxHash
+            network: networkId
           })
         });
         $('withdrawAmount').value = '';
         showActionNotice(`Withdrawal request of ${money(amount)} to ${shortAddr(walletState.address)} submitted.`);
         await openAccount();
+      } catch (err) {
+        showActionNotice(err.message, true);
+      }
+    });
+
+    async function loadRecurring() {
+      try {
+        const data = await api('/api/recurring-transactions');
+        const items = data.items || [];
+        if (!items.length) {
+          $('recurringList').innerHTML = '<p class="muted">No recurring transactions yet.</p>';
+          return;
+        }
+        $('recurringList').innerHTML =
+          '<table><thead><tr><th>Rule</th><th>Amount</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead><tbody>' +
+          items.map(r => `
+            <tr>
+              <td>${escapeHtml(r.label)}</td>
+              <td>${displayMoney(r.amount)}</td>
+              <td>Every ${escapeHtml(r.interval_count)} ${escapeHtml(r.interval_unit)}</td>
+              <td><span class="badge-proof">${escapeHtml(r.status)}</span></td>
+              <td>
+                ${r.status === 'active'
+                  ? `<button class="btn" type="button" onclick="toggleRecurring(${r.id}, 'pause')">Pause</button>`
+                  : r.status === 'paused'
+                    ? `<button class="btn" type="button" onclick="toggleRecurring(${r.id}, 'resume')">Resume</button>`
+                    : '—'}
+              </td>
+            </tr>
+          `).join('') +
+          '</tbody></table>';
+      } catch (_) {}
+    }
+
+    window.toggleRecurring = async function(id, action) {
+      try {
+        await api(`/api/recurring-transactions/${id}/${action}`, { method: 'POST' });
+        await loadRecurring();
+      } catch (err) {
+        showActionNotice(err.message, true);
+      }
+    };
+
+    $('recurringForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearActionNotice();
+      const actionType = $('recActionType').value;
+      const networkId = walletState.networkId || networkIdForChain(walletState.chainId, walletState.network);
+      if (actionType === 'withdrawal') {
+        if (!walletState.connected || networkId !== 'ethereum' || !/^0x[a-fA-F0-9]{40}$/.test(walletState.address || '')) {
+          return showActionNotice('Connect Trust Wallet on Ethereum mainnet before scheduling a withdrawal.', true);
+        }
+      }
+      try {
+        await api('/api/recurring-transactions', {
+          method: 'POST',
+          body: JSON.stringify({
+            label: $('recLabel').value.trim(),
+            amount: Number($('recAmount').value),
+            actionType,
+            intervalUnit: $('recIntervalUnit').value,
+            intervalCount: 1,
+            network: actionType === 'withdrawal' ? networkId : 'ethereum',
+            walletAddress: actionType === 'withdrawal' ? walletState.address : ''
+          })
+        });
+        $('recurringForm').reset();
+        showActionNotice('Recurring transaction rule created.');
+        await loadRecurring();
       } catch (err) {
         showActionNotice(err.message, true);
       }
@@ -1059,14 +1120,12 @@
       $('account').classList.remove('hidden');
       $('logoutBtn').classList.remove('hidden');
       if (me.user && me.user.role === 'admin') $('adminLink').classList.remove('hidden');
-
-      // Display only a neutral heading rather than internal account identifiers
       $('hello').textContent = 'Dashboard';
       paintBalances(dash);
-
       try {
         const saved = JSON.parse(localStorage.getItem('trust_wallet_session') || 'null');
         if (saved && saved.connected && saved.address) {
+          saved.networkId = saved.networkId || networkIdForChain(saved.chainId, saved.network);
           walletState = saved;
         }
       } catch (_) {}
@@ -1074,67 +1133,10 @@
       renderCharts(dash);
       renderProofOfTrades(dash);
       renderActivity(dash);
-      async function loadRecurring() {
-  try {
-    const data = await api('/api/recurring-transactions');
-    const items = data.items || [];
-    if (!items.length) {
-      $('recurringList').innerHTML = '<p class="muted">No recurring transactions yet.</p>';
-      return;
+      await loadRecurring();
+      await loadDepositAddresses();
     }
-    $('recurringList').innerHTML =
-      '<table><thead><tr><th>Rule</th><th>Amount</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead><tbody>' +
-      items.map(r => `
-        <tr>
-          <td>${escapeHtml(r.label)}</td>
-          <td>${displayMoney(r.amount)}</td>
-          <td>Every ${escapeHtml(r.interval_count)} ${escapeHtml(r.interval_unit)}</td>
-          <td><span class="badge-proof">${escapeHtml(r.status)}</span></td>
-          <td>
-            ${r.status === 'active'
-              ? `<button class="btn" type="button" onclick="toggleRecurring(${r.id}, 'pause')">Pause</button>`
-              : r.status === 'paused'
-                ? `<button class="btn" type="button" onclick="toggleRecurring(${r.id}, 'resume')">Resume</button>`
-                : '—'}
-          </td>
-        </tr>
-      `).join('') +
-      '</tbody></table>';
-  } catch (_) {}
-}
 
-window.toggleRecurring = async function(id, action) {
-  try {
-    await api(`/api/recurring-transactions/${id}/${action}`, { method: 'POST' });
-    await loadRecurring();
-  } catch (err) {
-    showActionNotice(err.message, true);
-  }
-};
-
-$('recurringForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  clearActionNotice();
-  try {
-    await api('/api/recurring-transactions', {
-      method: 'POST',
-      body: JSON.stringify({
-        label: $('recLabel').value.trim(),
-        amount: Number($('recAmount').value),
-        actionType: $('recActionType').value,
-        intervalUnit: $('recIntervalUnit').value,
-        intervalCount: 1,
-        network: walletState.connected ? (walletState.network || 'ethereum').toLowerCase() : 'ethereum',
-        walletAddress: walletState.connected ? walletState.address : ''
-      })
-    });
-    $('recurringForm').reset();
-    showActionNotice('Recurring transaction rule created.');
-    await loadRecurring();
-  } catch (err) {
-    showActionNotice(err.message, true);
-  }
-});
     $('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearGateError();
