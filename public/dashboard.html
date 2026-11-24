@@ -300,7 +300,8 @@
         <p class="muted">Only Trust Wallet on Ethereum mainnet is accepted. Connecting asks you to sign a wallet-link message. It does not send a transaction.</p>
         <div class="stack">
           <button class="btn primary" id="trustWalletBtn" type="button">Connect Trust Wallet</button>
-          <small class="muted">Uses the Trust Wallet provider (window.trustwallet.ethereum or an injected EIP-1193 provider).</small>
+          <a class="btn" id="openTrustWalletLink" href="https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fnovabridge-capital.vercel.app%2Fdashboard%2Fapps">Open in the Trust Wallet app</a>
+          <small class="muted">On iPhone or Android, use the button above if this browser does not show a Trust Wallet prompt. Then sign in again inside Trust Wallet and connect.</small>
         </div>
         <p class="notice error hidden" id="walletError"></p>
       </div>
@@ -546,19 +547,73 @@
       return false;
     }
 
-    // Strictly resolve Trust Wallet provider ONLY (no MetaMask/generic fallback)
+    const announcedProviders = [];
+    window.addEventListener('eip6963:announceProvider', (event) => {
+      if (event.detail && event.detail.provider) announcedProviders.push(event.detail);
+    });
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+    function isTrustProvider(provider, info) {
+      if (!provider || typeof provider.request !== 'function') return false;
+      if (provider.isTrust || provider.isTrustWallet) return true;
+      const rdns = info && info.rdns;
+      const name = info && info.name;
+      return rdns === 'com.trustwallet.app' || /trust\s*wallet/i.test(name || '');
+    }
+
     function getTrustWalletProvider() {
-      if (window.trustwallet && window.trustwallet.ethereum) {
-        return window.trustwallet.ethereum;
+      const announced = announcedProviders.find(item => isTrustProvider(item.provider, item.info));
+      if (announced) return announced.provider;
+      const trustRoot = window.trustwallet;
+      if (trustRoot) {
+        if (trustRoot.ethereum && typeof trustRoot.ethereum.request === 'function') return trustRoot.ethereum;
+        if (typeof trustRoot.request === 'function') return trustRoot;
       }
-      if (window.ethereum && window.ethereum.isTrust) {
-        return window.ethereum;
+      const list = [];
+      if (window.ethereum) list.push(window.ethereum);
+      if (window.ethereum && Array.isArray(window.ethereum.providers)) list.push(...window.ethereum.providers);
+      return list.find(provider => isTrustProvider(provider)) || null;
+    }
+
+    function utf8ToHex(text) {
+      const bytes = new TextEncoder().encode(text);
+      return '0x' + Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function linkWalletOnServer(provider, address) {
+      const nonce = await api('/api/linked-wallets/nonce');
+      const message = nonce.message;
+      const attempts = [
+        [utf8ToHex(message), address],
+        [message, address]
+      ];
+      let lastError = null;
+      for (const params of attempts) {
+        let signature;
+        try {
+          signature = await provider.request({ method: 'personal_sign', params });
+        } catch (err) {
+          if (err && Number(err.code) === 4001) throw new Error('The signature request was rejected in Trust Wallet.');
+          lastError = err;
+          continue;
+        }
+        try {
+          await api('/api/linked-wallets/connect', {
+            method: 'POST',
+            body: JSON.stringify({
+              network: 'ethereum',
+              address,
+              signature,
+              walletName: 'Trust Wallet'
+            })
+          });
+          return;
+        } catch (err) {
+          lastError = err;
+          if (!/approve the link|could not be checked/i.test(err.message || '')) throw err;
+        }
       }
-      if (window.ethereum && Array.isArray(window.ethereum.providers)) {
-        const trust = window.ethereum.providers.find(p => p && p.isTrust);
-        if (trust) return trust;
-      }
-      return null;
+      throw lastError || new Error('Trust Wallet did not return a signature.');
     }
 
     async function readNativeBalance(provider, accountAddress) {
@@ -629,32 +684,6 @@
         zcash: 'zcash'
       };
       return known[String(label || '').trim().toLowerCase()] || '';
-    }
-
-    async function linkWalletOnServer(provider, address) {
-      const nonce = await api('/api/linked-wallets/nonce');
-      let signature;
-      try {
-        signature = await provider.request({
-          method: 'personal_sign',
-          params: [nonce.message, address]
-        });
-      } catch (err) {
-        if (err && err.code === 4001) throw err;
-        signature = await provider.request({
-          method: 'personal_sign',
-          params: [address, nonce.message]
-        });
-      }
-      await api('/api/linked-wallets/connect', {
-        method: 'POST',
-        body: JSON.stringify({
-          network: 'ethereum',
-          address,
-          signature,
-          walletName: 'Trust Wallet'
-        })
-      });
     }
 
     function setConnectedWallet(address, networkLabel, chainId = '', native = null, networkId = '') {
@@ -936,12 +965,58 @@
       showActionNotice('Trust Wallet disconnected. Reconnect Trust Wallet to withdraw.');
     };
 
+    function trustWalletDeepLink() {
+      return 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(location.href);
+    }
+
+    const openTrustLink = $('openTrustWalletLink');
+    if (openTrustLink) openTrustLink.href = trustWalletDeepLink();
+
+    async function waitForTrustProvider() {
+      const started = Date.now();
+      while (Date.now() - started < 1200) {
+        window.dispatchEvent(new Event('eip6963:requestProvider'));
+        const provider = getTrustWalletProvider();
+        if (provider) return provider;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return null;
+    }
+
+    async function ensureEthereum(provider) {
+      let chainIdHex = await provider.request({ method: 'eth_chainId' }).catch(() => '0x1');
+      if (String(parseInt(chainIdHex, 16) || 0) === '1') return '1';
+      try {
+        await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] });
+      } catch (err) {
+        if (Number(err && err.code) === 4902) {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x1',
+              chainName: 'Ethereum',
+              nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://ethereum-rpc.publicnode.com'],
+              blockExplorerUrls: ['https://etherscan.io']
+            }]
+          });
+        }
+      }
+      chainIdHex = await provider.request({ method: 'eth_chainId' }).catch(() => chainIdHex);
+      return String(parseInt(chainIdHex, 16) || 1);
+    }
+
     $('trustWalletBtn').onclick = async () => {
       const errEl = $('walletError');
       errEl.classList.add('hidden');
-      const provider = getTrustWalletProvider();
+      const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const provider = await waitForTrustProvider();
       if (!provider) {
-        errEl.textContent = 'Trust Wallet was not detected. Open in Trust Wallet or install the Trust Wallet extension.';
+        if (mobile) {
+          location.assign(trustWalletDeepLink());
+          return;
+        }
+        errEl.textContent = 'Trust Wallet was not detected. Install the extension, or open this page in the Trust Wallet app.';
         errEl.classList.remove('hidden');
         return;
       }
@@ -949,15 +1024,17 @@
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
         if (!accounts || !accounts[0]) throw new Error('No account returned by Trust Wallet.');
         const accountAddress = accounts[0];
-        const chainIdHex = await provider.request({ method: 'eth_chainId' }).catch(() => '0x1');
-        const chainId = String(parseInt(chainIdHex, 16) || 1);
-        if (chainId !== '1') throw new Error('Switch Trust Wallet to Ethereum mainnet before linking.');
+        const chainId = await ensureEthereum(provider);
         const native = await readNativeBalance(provider, accountAddress);
         await linkWalletOnServer(provider, accountAddress);
-        setConnectedWallet(accountAddress, 'Ethereum', chainId, native, 'ethereum');
+        const label = chainId === '1' ? 'Ethereum' : (CHAINS[chainId] || 'Ethereum');
+        setConnectedWallet(accountAddress, label, chainId, native, 'ethereum');
         showContractNotice(`Trust Wallet linked (${shortAddr(accountAddress)}). No transaction was sent.`);
       } catch (err) {
-        errEl.textContent = err.message || 'Trust Wallet could not be linked.';
+        const message = (err && err.message) || 'Trust Wallet could not be linked.';
+        errEl.textContent = /Authentication required/i.test(message)
+          ? 'Sign in on this page inside Trust Wallet, then connect again.'
+          : message;
         errEl.classList.remove('hidden');
       }
     };

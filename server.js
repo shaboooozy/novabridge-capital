@@ -296,7 +296,11 @@ const dbReady = initDb().catch(err => {
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false
+}));
 app.use(express.json({ limit: '100kb' }));
 app.use((req, res, next) => {
   dbReady.then(() => next()).catch(() => {
