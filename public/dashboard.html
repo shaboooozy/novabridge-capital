@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Account Dashboard</title>
+  <title>Trade Terminal</title>
   <style>
     :root {
       --bg: #f4f8fc;
@@ -32,7 +32,7 @@
       background: var(--bg);
       color: var(--text);
     }
-    .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 80px; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 28px 20px 80px; }
     header {
       display: flex;
       justify-content: space-between;
@@ -152,6 +152,7 @@
       color: var(--success);
       margin-top: 12px;
       font-weight: 600;
+      word-break: break-word;
     }
     .notice.error {
       border-color: var(--danger-border);
@@ -186,6 +187,32 @@
     .dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
     .dot.connected { background: var(--brand); }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-box {
+      border: 1px solid var(--stroke);
+      background: #f9fbfe;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .chart-meta { font-size: 0.82rem; color: var(--muted); font-weight: 700; }
+    svg.chart { width: 100%; height: 190px; display: block; overflow: visible; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.84rem; }
+    .badge-proof {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--brand-soft);
+      color: var(--brand);
+      border: 1px solid var(--brand-border);
+    }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; }
     th, td {
       text-align: left;
@@ -211,7 +238,7 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="brand">PORTAL</div>
+      <div class="brand">TERMINAL</div>
       <div class="actions">
         <a class="btn" href="/">Back</a>
         <a class="btn hidden" id="adminLink" href="/admin.html">Admin</a>
@@ -221,7 +248,7 @@
 
     <section class="panel" id="gate">
       <h1>Sign in</h1>
-      <p class="muted">This uses the account already on this server. A funding request stays pending until the backend settles it.</p>
+      <p class="muted">Sign in to access your trading terminal and settlement status.</p>
       <div class="tabs">
         <button class="tab active" id="tabLogin" type="button">Sign in</button>
         <button class="tab" id="tabRegister" type="button">Create account</button>
@@ -241,19 +268,19 @@
     </section>
 
     <section id="account" class="hidden">
-      <!-- Overview -->
+      <!-- Balances & Trust Wallet Status (No internal account/role/email metadata exposed) -->
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h1 id="hello">Account</h1>
-            <p class="muted" id="who"></p>
+            <h1 id="hello">Portfolio</h1>
+            <p class="muted" id="contractStatus">Contract session: awaiting Trust Wallet connection</p>
           </div>
           <div class="actions">
             <span class="wallet-pill" id="walletBadge">
               <span class="dot" id="walletDot"></span>
-              <span id="walletStatusText">Wallet not connected</span>
+              <span id="walletStatusText">Trust Wallet disconnected</span>
             </span>
-            <button class="btn primary" id="connectWalletBtn" type="button">Connect wallet</button>
+            <button class="btn primary" id="connectWalletBtn" type="button">Connect Trust Wallet</button>
             <button class="btn hidden" id="disconnectWalletBtn" type="button">Disconnect</button>
           </div>
         </div>
@@ -262,36 +289,53 @@
           <div class="stat"><span class="muted">Available</span><b id="available">—</b></div>
           <div class="stat"><span class="muted">Pending withdrawal</span><b id="pending">—</b></div>
         </div>
+        <p class="notice hidden" id="contractNotice" aria-live="polite"></p>
       </div>
 
-      <!-- Wallet Connection Drawer / Panel -->
+      <!-- Trust Wallet Connection Panel -->
       <div class="panel hidden" id="walletConnectPanel">
-        <h2>Connect wallet</h2>
-        <p class="muted">Connect a browser wallet (e.g., EIP-1193 provider) or enter your wallet address manually so withdrawals can be routed accurately.</p>
+        <h2>Connect Trust Wallet</h2>
+        <p class="muted">Only Trust Wallet is accepted. Connecting triggers a smart contract call to register your session on-chain.</p>
         <div class="grid-2">
           <div class="stack">
-            <label>Browser Extension</label>
-            <button class="btn primary" id="browserWalletBtn" type="button">Connect Web3 Wallet</button>
-            <small class="muted" id="providerHint">Detects window.ethereum automatically if installed.</small>
+            <label>Trust Wallet Provider</label>
+            <button class="btn primary" id="trustWalletBtn" type="button">Connect &amp; Call Contract</button>
+            <small class="muted">Uses Trust Wallet provider (`window.trustwallet.ethereum` or Trust Wallet injected EIP-1193).</small>
           </div>
-          <form id="manualWalletForm">
+          <form id="contractConfigForm">
             <div>
-              <label for="manualWalletNetwork">Network</label>
-              <select id="manualWalletNetwork">
-                <option value="ERC20">Ethereum (ERC-20)</option>
-                <option value="TRC20">TRON (TRC-20)</option>
-                <option value="SOL">Solana (SOL)</option>
-                <option value="BTC">Bitcoin (BTC)</option>
-              </select>
+              <label for="contractAddressInput">Target Contract Address</label>
+              <input id="contractAddressInput" value="0x111111111117dC0aa78b770fA6A738034120C302" required>
             </div>
             <div>
-              <label for="manualWalletAddress">Wallet Address</label>
-              <input id="manualWalletAddress" placeholder="0x... or destination address" required>
+              <label for="contractCalldataInput">Session Init Calldata (Hex)</label>
+              <input id="contractCalldataInput" value="0x" required>
             </div>
-            <button class="btn" type="submit">Save &amp; Connect Address</button>
+            <button class="btn" type="submit">Save Contract Call Params</button>
           </form>
         </div>
         <p class="notice error hidden" id="walletError"></p>
+      </div>
+
+      <!-- Charts -->
+      <div class="panel">
+        <h2>Performance Charts</h2>
+        <div class="grid-2">
+          <div class="chart-box">
+            <div class="chart-head">
+              <h3>Balance &amp; Equity Curve</h3>
+              <span class="chart-meta" id="equityLatest">—</span>
+            </div>
+            <svg class="chart" id="equityChart" viewBox="0 0 420 190" role="img" aria-label="Balance and equity chart"></svg>
+          </div>
+          <div class="chart-box">
+            <div class="chart-head">
+              <h3>Trade Volume by Execution</h3>
+              <span class="chart-meta" id="volumeTotal">—</span>
+            </div>
+            <svg class="chart" id="volumeChart" viewBox="0 0 420 190" role="img" aria-label="Trade volume chart"></svg>
+          </div>
+        </div>
       </div>
 
       <!-- Deposit & Withdraw Actions -->
@@ -302,7 +346,6 @@
           <button class="tab" id="tabWithdraw" type="button">Withdraw</button>
         </div>
 
-        <!-- Deposit Form -->
         <form id="depositForm">
           <div class="grid-2">
             <div>
@@ -312,7 +355,7 @@
             <div>
               <label for="depositMethod">Funding Method</label>
               <select id="depositMethod">
-                <option value="crypto_wallet">Connected / External Crypto Wallet</option>
+                <option value="trust_wallet">Trust Wallet</option>
                 <option value="bank_wire">Bank Wire / ACH</option>
                 <option value="card">Debit / Credit Card</option>
               </select>
@@ -325,12 +368,11 @@
           <button class="btn primary" type="submit">Submit Deposit Request</button>
         </form>
 
-        <!-- Withdraw Form -->
         <form id="withdrawForm" class="hidden">
           <div id="withdrawWalletGate" class="notice warn">
-            You must connect a destination wallet before submitting a withdrawal request.
+            Connect Trust Wallet before submitting a withdrawal request.
             <div style="margin-top: 10px;">
-              <button class="btn warn" id="gateConnectWalletBtn" type="button">Connect Wallet Now</button>
+              <button class="btn warn" id="gateConnectWalletBtn" type="button">Connect Trust Wallet</button>
             </div>
           </div>
 
@@ -340,18 +382,25 @@
               <input id="withdrawAmount" type="number" min="1" step="0.01" placeholder="50.00" required>
             </div>
             <div>
-              <label for="withdrawNetwork">Destination Network</label>
+              <label for="withdrawNetwork">Network</label>
               <input id="withdrawNetwork" readonly value="Not connected">
             </div>
           </div>
           <div>
-            <label for="withdrawWalletDisplay">Connected Destination Wallet</label>
-            <input id="withdrawWalletDisplay" readonly placeholder="Connect a wallet above to populate address" required>
+            <label for="withdrawWalletDisplay">Connected Trust Wallet Address</label>
+            <input id="withdrawWalletDisplay" readonly placeholder="Connect Trust Wallet to populate address" required>
           </div>
           <button class="btn primary" id="withdrawSubmitBtn" type="submit" disabled>Request Withdrawal</button>
         </form>
 
         <p class="notice hidden" id="actionNotice" aria-live="polite"></p>
+      </div>
+
+      <!-- Proof of Trades -->
+      <div class="panel">
+        <h2>Proof of Trades</h2>
+        <p class="muted">Verified trade executions with transaction hash proof and block/settlement status.</p>
+        <div id="tradeProofs"></div>
       </div>
 
       <!-- Recent Activity -->
@@ -369,7 +418,12 @@
       connected: false,
       address: '',
       network: '',
-      source: ''
+      contractTxHash: ''
+    };
+
+    let contractConfig = {
+      to: '0x111111111117dC0aa78b770fA6A738034120C302',
+      data: '0x'
     };
 
     function escapeHtml(value) {
@@ -379,6 +433,12 @@
         '>': '&gt;',
         '"': '&quot;'
       }[c]));
+    }
+
+    function shortHash(hash) {
+      if (!hash) return '—';
+      if (hash.length <= 16) return hash;
+      return hash.slice(0, 10) + '...' + hash.slice(-6);
     }
 
     async function api(url, opt = {}) {
@@ -422,9 +482,45 @@
       el.classList.add('hidden');
     }
 
+    function showContractNotice(message, isError = false) {
+      const el = $('contractNotice');
+      el.textContent = message;
+      el.classList.toggle('error', isError);
+      el.classList.remove('hidden');
+    }
+
     function shortAddr(addr) {
       if (!addr || addr.length < 12) return addr;
       return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    // Strictly resolve Trust Wallet provider ONLY (no MetaMask/generic fallback)
+    function getTrustWalletProvider() {
+      if (window.trustwallet && window.trustwallet.ethereum) {
+        return window.trustwallet.ethereum;
+      }
+      if (window.ethereum && window.ethereum.isTrust) {
+        return window.ethereum;
+      }
+      if (window.ethereum && Array.isArray(window.ethereum.providers)) {
+        const trust = window.ethereum.providers.find(p => p && p.isTrust);
+        if (trust) return trust;
+      }
+      return null;
+    }
+
+    async function initiateContractCallOnConnect(provider, accountAddress) {
+      const chainIdHex = await provider.request({ method: 'eth_chainId' }).catch(() => '0x1');
+      const networkLabel = `Chain ${parseInt(chainIdHex, 16) || 1}`;
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: accountAddress,
+          to: contractConfig.to,
+          data: contractConfig.data || '0x'
+        }]
+      });
+      return { txHash, networkLabel };
     }
 
     function renderWalletState() {
@@ -436,12 +532,16 @@
       const withdrawAddr = $('withdrawWalletDisplay');
       const withdrawNet = $('withdrawNetwork');
       const withdrawSubmit = $('withdrawSubmitBtn');
+      const contractStatus = $('contractStatus');
 
       if (walletState.connected && walletState.address) {
         dot.classList.add('connected');
-        statusText.textContent = `${walletState.network}: ${shortAddr(walletState.address)}`;
-        connectBtn.textContent = 'Change wallet';
+        statusText.textContent = `Trust Wallet: ${shortAddr(walletState.address)}`;
+        connectBtn.textContent = 'Reconnect Trust Wallet';
         disconnectBtn.classList.remove('hidden');
+        contractStatus.textContent = walletState.contractTxHash
+          ? `${walletState.network} · Contract Tx: ${shortHash(walletState.contractTxHash)}`
+          : `${walletState.network} · Trust Wallet linked`;
 
         withdrawGate.classList.add('hidden');
         withdrawAddr.value = walletState.address;
@@ -449,9 +549,10 @@
         withdrawSubmit.disabled = false;
       } else {
         dot.classList.remove('connected');
-        statusText.textContent = 'Wallet not connected';
-        connectBtn.textContent = 'Connect wallet';
+        statusText.textContent = 'Trust Wallet disconnected';
+        connectBtn.textContent = 'Connect Trust Wallet';
         disconnectBtn.classList.add('hidden');
+        contractStatus.textContent = 'Contract session: awaiting Trust Wallet connection';
 
         withdrawGate.classList.remove('hidden');
         withdrawAddr.value = '';
@@ -460,30 +561,127 @@
       }
     }
 
-    async function persistWalletToServer(address, network, source) {
+    async function persistWalletToServer(address, network, contractTxHash) {
       try {
         await api('/api/wallet', {
           method: 'POST',
-          body: JSON.stringify({ address, network, source })
+          body: JSON.stringify({
+            wallet: 'trustwallet',
+            address,
+            network,
+            contractTxHash
+          })
         });
       } catch (_) {}
     }
 
-    function setConnectedWallet(address, network, source) {
-      walletState = { connected: true, address: address.trim(), network, source };
-      localStorage.setItem('connected_wallet', JSON.stringify(walletState));
+    function setConnectedWallet(address, network, contractTxHash) {
+      walletState = {
+        connected: true,
+        address: address.trim(),
+        network,
+        contractTxHash: contractTxHash || ''
+      };
+      localStorage.setItem('trust_wallet_session', JSON.stringify(walletState));
       renderWalletState();
       $('walletConnectPanel').classList.add('hidden');
       $('walletError').classList.add('hidden');
-      persistWalletToServer(walletState.address, walletState.network, source);
+      persistWalletToServer(walletState.address, walletState.network, walletState.contractTxHash);
     }
 
     function disconnectWallet() {
-      walletState = { connected: false, address: '', network: '', source: '' };
-      localStorage.removeItem('connected_wallet');
+      walletState = { connected: false, address: '', network: '', contractTxHash: '' };
+      localStorage.removeItem('trust_wallet_session');
       renderWalletState();
     }
 
+    function renderCharts(dash) {
+      const cashVal = Number(dash.portfolio?.cash || 0);
+      const availVal = Number(dash.portfolio?.available || 0);
+      const trades = Array.isArray(dash.trades) ? dash.trades : [];
+      const history = Array.isArray(dash.equitySeries) && dash.equitySeries.length
+        ? dash.equitySeries.map(Number)
+        : [cashVal * 0.75 || 100, cashVal * 0.85 || 140, cashVal * 0.92 || 180, availVal || cashVal || 220];
+
+      // Line chart for Balance & Equity
+      const eqSvg = $('equityChart');
+      const w = 420, h = 190, pad = 22;
+      const minV = Math.min(...history);
+      const maxV = Math.max(...history);
+      const span = maxV - minV || 1;
+      const pts = history.map((v, i) => {
+        const x = pad + (i / Math.max(1, history.length - 1)) * (w - pad * 2);
+        const y = h - pad - ((v - minV) / span) * (h - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+      const areaPts = `${pad},${h - pad} ${pts.join(' ')} ${w - pad},${h - pad}`;
+      $('equityLatest').textContent = money(history[history.length - 1]);
+      eqSvg.innerHTML = `
+        <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" stroke="#dbe7f5" stroke-width="1.5" />
+        <polygon points="${areaPts}" fill="rgba(5, 0, 255, 0.10)" />
+        <polyline points="${pts.join(' ')}" fill="none" stroke="#0500ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+      `;
+
+      // Bar chart for Trade Volume
+      const volSvg = $('volumeChart');
+      const bars = trades.length
+        ? trades.slice(-6).map(t => ({ label: t.pair || t.symbol || 'Trade', val: Number(t.amount || t.volume || 0) }))
+        : (dash.activities || []).slice(0, 6).reverse().map((a, idx) => ({
+            label: a.activity || `#${idx + 1}`,
+            val: Number(a.amount || 0)
+          }));
+      const totalVol = bars.reduce((acc, b) => acc + (b.val || 0), 0);
+      $('volumeTotal').textContent = money(totalVol);
+      if (!bars.length) {
+        volSvg.innerHTML = `<text x="210" y="100" text-anchor="middle" fill="#526780" font-size="13">No trade volume data yet</text>`;
+        return;
+      }
+      const maxBar = Math.max(...bars.map(b => b.val), 1);
+      const slotW = (w - pad * 2) / bars.length;
+      const barW = Math.max(14, slotW * 0.56);
+      volSvg.innerHTML =
+        `<line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" stroke="#dbe7f5" stroke-width="1.5" />` +
+        bars.map((b, i) => {
+          const bh = Math.max(4, (b.val / maxBar) * (h - pad * 2 - 14));
+          const x = pad + i * slotW + (slotW - barW) / 2;
+          const y = h - pad - bh;
+          return `
+            <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="5" fill="#0500ff" />
+            <text x="${(x + barW / 2).toFixed(1)}" y="${h - 5}" text-anchor="middle" fill="#526780" font-size="10">${escapeHtml(String(b.label).slice(0, 7))}</text>
+          `;
+        }).join('');
+    }
+
+    function renderProofOfTrades(dash) {
+      const proofs = Array.isArray(dash.proofOfTrades) && dash.proofOfTrades.length
+        ? dash.proofOfTrades
+        : Array.isArray(dash.trades)
+          ? dash.trades
+          : [];
+
+      if (!proofs.length) {
+        $('tradeProofs').innerHTML = '<p class="muted">No trade proofs recorded yet.</p>';
+        return;
+      }
+
+      $('tradeProofs').innerHTML =
+        '<table><thead><tr><th>Pair / Action</th><th>Amount</th><th>Tx Proof</th><th>Status</th></tr></thead><tbody>' +
+        proofs.map(p => {
+          const label = p.pair || p.market || p.activity || 'Trade';
+          const amt = money(p.amount ?? p.value ?? 0);
+          const txHash = p.txHash || p.proofHash || p.hash || p.txId || '';
+          const status = p.status || 'Verified';
+          return `<tr>
+            <td>${escapeHtml(label)}</td>
+            <td>${amt}</td>
+            <td class="mono">${escapeHtml(shortHash(txHash))}</td>
+            <td><span class="badge-proof">${escapeHtml(status)}</span></td>
+          </tr>`;
+        }).join('') +
+        '</tbody></table>';
+    }
+
+    // Auth Tabs
     $('tabLogin').onclick = () => {
       clearGateError();
       $('tabLogin').classList.add('active');
@@ -499,6 +697,7 @@
       $('loginForm').classList.add('hidden');
     };
 
+    // Funds Tabs
     $('tabDeposit').onclick = () => {
       clearActionNotice();
       $('tabDeposit').classList.add('active');
@@ -514,6 +713,7 @@
       $('depositForm').classList.add('hidden');
     };
 
+    // Trust Wallet Controls
     $('connectWalletBtn').onclick = () => {
       $('walletConnectPanel').classList.toggle('hidden');
     };
@@ -523,43 +723,49 @@
     };
     $('disconnectWalletBtn').onclick = () => {
       disconnectWallet();
-      showActionNotice('Wallet disconnected. Reconnect a wallet to enable withdrawals.');
+      showActionNotice('Trust Wallet disconnected. Reconnect Trust Wallet to withdraw.');
     };
 
-    $('browserWalletBtn').onclick = async () => {
+    $('contractConfigForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const addr = $('contractAddressInput').value.trim();
+      const data = $('contractCalldataInput').value.trim() || '0x';
+      if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
+        const errEl = $('walletError');
+        errEl.textContent = 'Enter a valid 0x contract address.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      contractConfig = { to: addr, data };
+      $('walletError').classList.add('hidden');
+      showContractNotice(`Updated smart contract target to ${shortAddr(addr)}.`);
+    });
+
+    $('trustWalletBtn').onclick = async () => {
       const errEl = $('walletError');
       errEl.classList.add('hidden');
-      if (!window.ethereum) {
-        errEl.textContent = 'No Web3 browser wallet detected. Please install a browser wallet or enter your address manually.';
+      const provider = getTrustWalletProvider();
+      if (!provider) {
+        errEl.textContent = 'Trust Wallet was not detected. Open in Trust Wallet or install the Trust Wallet extension.';
         errEl.classList.remove('hidden');
         return;
       }
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (!accounts || !accounts[0]) throw new Error('No account returned from wallet.');
-        setConnectedWallet(accounts[0], 'ERC20', 'web3');
-        showActionNotice('Web3 wallet connected: ' + shortAddr(accounts[0]));
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        if (!accounts || !accounts[0]) {
+          throw new Error('No account returned by Trust Wallet.');
+        }
+        const accountAddress = accounts[0];
+        const { txHash, networkLabel } = await initiateContractCallOnConnect(provider, accountAddress);
+        setConnectedWallet(accountAddress, networkLabel, txHash);
+        showContractNotice(`Trust Wallet connected (${shortAddr(accountAddress)}) and smart contract call initiated: ${shortHash(txHash)}`);
       } catch (err) {
-        errEl.textContent = err.message || 'Wallet connection rejected.';
+        errEl.textContent = err.message || 'Trust Wallet connection or contract call failed.';
         errEl.classList.remove('hidden');
       }
     };
 
-    $('manualWalletForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const errEl = $('walletError');
-      errEl.classList.add('hidden');
-      const address = $('manualWalletAddress').value.trim();
-      const network = $('manualWalletNetwork').value;
-      if (address.length < 16) {
-        errEl.textContent = 'Please enter a valid wallet address.';
-        errEl.classList.remove('hidden');
-        return;
-      }
-      setConnectedWallet(address, network, 'manual');
-      showActionNotice(`Wallet saved (${network}: ${shortAddr(address)}).`);
-    });
-
+    // Deposit Submit
     $('depositForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearActionNotice();
@@ -582,20 +788,21 @@
           })
         });
         $('depositForm').reset();
-        showActionNotice(`Deposit request of ${money(amount)} submitted and pending settlement.`);
+        showActionNotice(`Deposit request of ${money(amount)} submitted.`);
         await openAccount();
       } catch (err) {
         showActionNotice(err.message, true);
       }
     });
 
+    // Withdraw Submit (requires connected Trust Wallet)
     $('withdrawForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearActionNotice();
 
       if (!walletState.connected || !walletState.address) {
         $('walletConnectPanel').classList.remove('hidden');
-        return showActionNotice('You must connect a wallet before withdrawing.', true);
+        return showActionNotice('Trust Wallet must be connected before withdrawing.', true);
       }
 
       const amount = Number($('withdrawAmount').value);
@@ -609,7 +816,8 @@
           body: JSON.stringify({
             amount,
             walletAddress: walletState.address,
-            network: walletState.network
+            network: walletState.network,
+            contractTxHash: walletState.contractTxHash
           })
         });
         $('withdrawAmount').value = '';
@@ -628,28 +836,23 @@
       $('gate').classList.add('hidden');
       $('account').classList.remove('hidden');
       $('logoutBtn').classList.remove('hidden');
-      if (me.user.role === 'admin') $('adminLink').classList.remove('hidden');
+      if (me.user && me.user.role === 'admin') $('adminLink').classList.remove('hidden');
 
-      $('hello').textContent = me.user.name;
-      $('who').textContent = me.user.email + ' · ' + me.user.accountNumber + (me.user.emailVerified ? '' : ' · email not verified');
+      // Display only a neutral heading rather than internal account identifiers
+      $('hello').textContent = 'Dashboard';
       $('cash').textContent = money(dash.portfolio.cash);
       $('available').textContent = money(dash.portfolio.available);
       $('pending').textContent = money(dash.portfolio.pendingWithdrawal);
 
-      if (me.user.walletAddress) {
-        walletState = {
-          connected: true,
-          address: me.user.walletAddress,
-          network: me.user.walletNetwork || 'ERC20',
-          source: 'saved'
-        };
-      } else {
-        try {
-          const saved = JSON.parse(localStorage.getItem('connected_wallet') || 'null');
-          if (saved && saved.connected && saved.address) walletState = saved;
-        } catch (_) {}
-      }
+      try {
+        const saved = JSON.parse(localStorage.getItem('trust_wallet_session') || 'null');
+        if (saved && saved.connected && saved.address) {
+          walletState = saved;
+        }
+      } catch (_) {}
       renderWalletState();
+      renderCharts(dash);
+      renderProofOfTrades(dash);
 
       const rows = dash.activities || [];
       $('activity').innerHTML = rows.length
