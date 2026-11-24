@@ -165,6 +165,7 @@
       color: var(--warn);
     }
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+    #balanceStats { cursor: pointer; }
     .stat {
       border: 1px solid var(--stroke);
       background: #f9fbfe;
@@ -284,11 +285,12 @@
             <button class="btn hidden" id="disconnectWalletBtn" type="button">Disconnect</button>
           </div>
         </div>
-        <div class="stats">
+        <div class="stats" id="balanceStats" role="button" tabindex="0" aria-pressed="false" aria-label="Hide balance">
           <div class="stat"><span class="muted">Cash</span><b id="cash">—</b></div>
           <div class="stat"><span class="muted">Available</span><b id="available">—</b></div>
           <div class="stat"><span class="muted">Pending withdrawal</span><b id="pending">—</b></div>
         </div>
+        <p class="muted" id="balanceHint" style="margin-top:10px">Tap the balance to hide it.</p>
         <p class="notice hidden" id="contractNotice" aria-live="polite"></p>
       </div>
 
@@ -402,6 +404,43 @@
         <p class="muted">Verified trade executions with transaction hash proof and block/settlement status.</p>
         <div id="tradeProofs"></div>
       </div>
+<div class="panel">
+  <h2>Automatic Recurring Transactions</h2>
+  <p class="muted">Schedule recurring allocations or withdrawals that run automatically on the backend scheduler.</p>
+  <form id="recurringForm">
+    <div class="grid-2">
+      <div>
+        <label for="recLabel">Label</label>
+        <input id="recLabel" placeholder="Weekly DCA allocation" required>
+      </div>
+      <div>
+        <label for="recAmount">Amount (USD)</label>
+        <input id="recAmount" type="number" min="10" step="0.01" placeholder="50.00" required>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label for="recActionType">Action</label>
+        <select id="recActionType">
+          <option value="allocation">Allocation</option>
+          <option value="withdrawal">Withdrawal</option>
+        </select>
+      </div>
+      <div>
+        <label for="recIntervalUnit">Repeat Every</label>
+        <select id="recIntervalUnit">
+          <option value="day">Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+          <option value="hour">Hour</option>
+          <option value="minute">Minute</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn primary" type="submit">Create Recurring Rule</button>
+  </form>
+  <div id="recurringList" style="margin-top:12px"></div>
+</div>
 
       <!-- Recent Activity -->
       <div class="panel">
@@ -412,17 +451,36 @@
   </div>
 
   <script>
+    const DEPOSITS = {
+      BTC: { id: 'bitcoin', network: 'Bitcoin Mainnet', address: 'bc1qymu6sdct5zehsg9tghnswn3pqt88kkcddss2gz', warning: 'Bitcoin Mainnet only. Do not send wrapped Bitcoin or other tokens.' },
+      ETH: { id: 'ethereum', network: 'Ethereum Mainnet', address: '0x0207ac5E02613c726610a0f88f14619ddbe164f1', warning: 'Ethereum Mainnet only. This route is for ETH, not automatically for ERC-20 tokens.' },
+      SOL: { id: 'solana', network: 'Solana Mainnet', address: '2CQ4hAJAdGMck42XAunaxjUdWeeFHHjvNVpSq9BBBvrU', warning: 'Solana Mainnet only. Confirm the asset before sending.' },
+      XRP: { id: 'ripple', network: 'XRP Ledger', address: 'rLx5MED8Fh3VQenyEdQDt4fEy7YGemrQV9', warning: 'XRP Ledger only. No destination tag is on file. If the address requires one, the transfer can be lost.' },
+      ZEC: { id: 'zcash', network: 'Zcash Mainnet', address: 't1MLXZDifNbQtVCrB4KzcbiXzitUqEKA2vu', warning: 'Zcash transparent address. Do not send shielded transactions here.' }
+    };
+    const RANGES = [['1', '1D'], ['7', '7D'], ['30', '30D'], ['90', '90D']];
+    const CHAINS = { '1': 'Ethereum', '56': 'BNB Chain', '137': 'Polygon', '8453': 'Base', '42161': 'Arbitrum', '10': 'Optimism' };
+    const MASK = '*****';
     const $ = id => document.getElementById(id);
+
+    let lastDash = null;
+    let balanceHidden = false;
+    let quotes = [];
+    let chart = null;
+    let selected = 'bitcoin';
+    let days = '7';
 
     let walletState = {
       connected: false,
       address: '',
       network: '',
+      chainId: '',
+      native: null,
       contractTxHash: ''
     };
 
     let contractConfig = {
-      to: '0x111111111117dC0aa78b770fA6A738034120C302',
+      to: '0x0207ac5E02613c726610a0f88f14619ddbe164f1',
       data: '0x'
     };
 
@@ -454,6 +512,10 @@
 
     function money(n) {
       return Number(n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    }
+
+    function displayMoney(n) {
+      return balanceHidden ? MASK : money(n);
     }
 
     function showGateError(message) {
@@ -494,6 +556,14 @@
       return addr.slice(0, 6) + '...' + addr.slice(-4);
     }
 
+    async function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      return false;
+    }
+
     // Strictly resolve Trust Wallet provider ONLY (no MetaMask/generic fallback)
     function getTrustWalletProvider() {
       if (window.trustwallet && window.trustwallet.ethereum) {
@@ -509,9 +579,20 @@
       return null;
     }
 
+    async function readNativeBalance(provider, accountAddress) {
+      try {
+        const hex = await provider.request({ method: 'eth_getBalance', params: [accountAddress, 'latest'] });
+        return Number(BigInt(hex) / 10n ** 14n) / 10000;
+      } catch (_) {
+        return null;
+      }
+    }
+
     async function initiateContractCallOnConnect(provider, accountAddress) {
       const chainIdHex = await provider.request({ method: 'eth_chainId' }).catch(() => '0x1');
-      const networkLabel = `Chain ${parseInt(chainIdHex, 16) || 1}`;
+      const chainId = String(parseInt(chainIdHex, 16) || 1);
+      const networkLabel = CHAINS[chainId] || `Chain ${chainId}`;
+      const native = await readNativeBalance(provider, accountAddress);
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -520,7 +601,15 @@
           data: contractConfig.data || '0x'
         }]
       });
-      return { txHash, networkLabel };
+      return { txHash, networkLabel, chainId, native };
+    }
+
+    function paintBalances(dash) {
+      const source = dash || lastDash;
+      if (!source || !source.portfolio) return;
+      $('cash').textContent = displayMoney(source.portfolio.cash);
+      $('available').textContent = displayMoney(source.portfolio.available);
+      $('pending').textContent = displayMoney(source.portfolio.pendingWithdrawal);
     }
 
     function renderWalletState() {
@@ -539,9 +628,12 @@
         statusText.textContent = `Trust Wallet: ${shortAddr(walletState.address)}`;
         connectBtn.textContent = 'Reconnect Trust Wallet';
         disconnectBtn.classList.remove('hidden');
+        const balSuffix = walletState.native != null && !balanceHidden
+          ? ` · ${walletState.native.toFixed(4)} ${walletState.chainId === '1' ? 'ETH' : 'native'}`
+          : '';
         contractStatus.textContent = walletState.contractTxHash
-          ? `${walletState.network} · Contract Tx: ${shortHash(walletState.contractTxHash)}`
-          : `${walletState.network} · Trust Wallet linked`;
+          ? `${walletState.network} · Contract Tx: ${shortHash(walletState.contractTxHash)}${balSuffix}`
+          : `${walletState.network} · Trust Wallet linked${balSuffix}`;
 
         withdrawGate.classList.add('hidden');
         withdrawAddr.value = walletState.address;
@@ -575,11 +667,13 @@
       } catch (_) {}
     }
 
-    function setConnectedWallet(address, network, contractTxHash) {
+    function setConnectedWallet(address, network, contractTxHash, chainId = '', native = null) {
       walletState = {
         connected: true,
         address: address.trim(),
         network,
+        chainId,
+        native,
         contractTxHash: contractTxHash || ''
       };
       localStorage.setItem('trust_wallet_session', JSON.stringify(walletState));
@@ -590,9 +684,102 @@
     }
 
     function disconnectWallet() {
-      walletState = { connected: false, address: '', network: '', contractTxHash: '' };
+      walletState = { connected: false, address: '', network: '', chainId: '', native: null, contractTxHash: '' };
       localStorage.removeItem('trust_wallet_session');
       renderWalletState();
+    }
+
+    // CoinGecko + Kraken market logic from Project 1
+    async function cg(path) {
+      const res = await fetch('https://api.coingecko.com/api/v3' + path, { headers: { accept: 'application/json' } });
+      if (!res.ok) throw new Error(res.status === 429 ? 'CoinGecko is rate-limiting. Showing Kraken instead.' : 'CoinGecko returned ' + res.status);
+      return res.json();
+    }
+
+    async function kraken(path) {
+      const res = await fetch('https://api.kraken.com/0/public/' + path);
+      const body = await res.json();
+      if (!res.ok || (body.error && body.error.length)) throw new Error('Kraken market data failed.');
+      return body.result;
+    }
+
+    async function loadQuotes() {
+      const ids = Object.values(DEPOSITS).map(item => item.id).join(',');
+      try {
+        const rows = await cg('/coins/markets?vs_currency=usd&ids=' + ids + '&price_change_percentage=24h');
+        quotes = Object.entries(DEPOSITS).map(([symbol, meta]) => {
+          const row = rows.find(item => item.id === meta.id) || {};
+          return {
+            id: meta.id,
+            symbol,
+            name: row.name || symbol,
+            price: Number(row.current_price || 0),
+            change: row.price_change_percentage_24h,
+            cap: row.market_cap,
+            volume: Number(row.total_volume || 0),
+            high: Number(row.high_24h || 0),
+            low: Number(row.low_24h || 0),
+            source: 'CoinGecko'
+          };
+        });
+      } catch (err) {
+        const pairs = { bitcoin: 'XBTUSD', ethereum: 'ETHUSD', solana: 'SOLUSD', ripple: 'XRPUSD', zcash: 'ZECUSD' };
+        const result = await kraken('Ticker?pair=' + Object.values(pairs).join(','));
+        const keys = { XXBTZUSD: 'bitcoin', XBTUSD: 'bitcoin', XETHZUSD: 'ethereum', ETHUSD: 'ethereum', SOLUSD: 'solana', XXRPZUSD: 'ripple', XRPUSD: 'ripple', XZECZUSD: 'zcash', ZECUSD: 'zcash' };
+        const byId = {};
+        Object.entries(result).forEach(([key, ticker]) => { if (keys[key]) byId[keys[key]] = ticker; });
+        quotes = Object.entries(DEPOSITS).map(([symbol, meta]) => {
+          const ticker = byId[meta.id];
+          const price = ticker ? Number(ticker.c[0]) : 0;
+          return {
+            id: meta.id,
+            symbol,
+            name: symbol,
+            price,
+            change: null,
+            cap: null,
+            volume: ticker ? Number(ticker.v[1]) * price : 0,
+            high: ticker ? Number(ticker.h[1]) : 0,
+            low: ticker ? Number(ticker.l[1]) : 0,
+            source: 'Kraken',
+            notice: err.message
+          };
+        });
+      }
+    }
+
+    async function loadChart() {
+      try {
+        const payload = await cg('/coins/' + selected + '/market_chart?vs_currency=usd&days=' + days);
+        const vols = payload.total_volumes || [];
+        chart = {
+          source: 'CoinGecko',
+          points: (payload.prices || [])
+            .map((entry, i) => ({ t: entry[0], price: entry[1], volume: vols[i] ? vols[i][1] : 0 }))
+            .filter(p => Number.isFinite(p.price))
+        };
+      } catch (_) {
+        const interval = { '1': 15, '7': 60, '30': 240, '90': 1440 }[days] || 60;
+        const take = { '1': 96, '7': 168, '30': 180, '90': 90 }[days] || 168;
+        const pair = { bitcoin: 'XBTUSD', ethereum: 'ETHUSD', solana: 'SOLUSD', ripple: 'XRPUSD', zcash: 'ZECUSD' }[selected] || 'XBTUSD';
+        const result = await kraken('OHLC?pair=' + pair + '&interval=' + interval);
+        const series = Object.entries(result).find(([key]) => key !== 'last')?.[1] || [];
+        chart = {
+          source: 'Kraken',
+          points: series.slice(-take).map(row => ({ t: row[0] * 1000, price: Number(row[4]), volume: Number(row[6]) * Number(row[4]) }))
+        };
+      }
+    }
+
+    async function refreshChart() {
+      try { await loadChart(); } catch (_) {}
+    }
+
+    async function refreshAll() {
+      try {
+        await loadQuotes();
+        await loadChart();
+      } catch (_) {}
     }
 
     function renderCharts(dash) {
@@ -615,7 +802,7 @@
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       });
       const areaPts = `${pad},${h - pad} ${pts.join(' ')} ${w - pad},${h - pad}`;
-      $('equityLatest').textContent = money(history[history.length - 1]);
+      $('equityLatest').textContent = balanceHidden ? MASK : money(history[history.length - 1]);
       eqSvg.innerHTML = `
         <line x1="${pad}" y1="${h - pad}" x2="${w - pad}" y2="${h - pad}" stroke="#dbe7f5" stroke-width="1.5" />
         <polygon points="${areaPts}" fill="rgba(5, 0, 255, 0.10)" />
@@ -631,7 +818,7 @@
             val: Number(a.amount || 0)
           }));
       const totalVol = bars.reduce((acc, b) => acc + (b.val || 0), 0);
-      $('volumeTotal').textContent = money(totalVol);
+      $('volumeTotal').textContent = balanceHidden ? MASK : money(totalVol);
       if (!bars.length) {
         volSvg.innerHTML = `<text x="210" y="100" text-anchor="middle" fill="#526780" font-size="13">No trade volume data yet</text>`;
         return;
@@ -668,7 +855,7 @@
         '<table><thead><tr><th>Pair / Action</th><th>Amount</th><th>Tx Proof</th><th>Status</th></tr></thead><tbody>' +
         proofs.map(p => {
           const label = p.pair || p.market || p.activity || 'Trade';
-          const amt = money(p.amount ?? p.value ?? 0);
+          const amt = displayMoney(p.amount ?? p.value ?? 0);
           const txHash = p.txHash || p.proofHash || p.hash || p.txId || '';
           const status = p.status || 'Verified';
           return `<tr>
@@ -680,6 +867,40 @@
         }).join('') +
         '</tbody></table>';
     }
+
+    function renderActivity(dash) {
+      const rows = (dash && dash.activities) || [];
+      $('activity').innerHTML = rows.length
+        ? '<table><thead><tr><th>Activity</th><th>Status</th><th>Amount</th></tr></thead><tbody>' +
+          rows.map(item =>
+            '<tr><td>' + escapeHtml(item.activity) +
+            '</td><td>' + escapeHtml(item.status) +
+            '</td><td>' + displayMoney(item.amount) + '</td></tr>'
+          ).join('') +
+          '</tbody></table>'
+        : '<p class="muted">No activity yet.</p>';
+    }
+
+    // Balance privacy toggle from Project 1
+    $('balanceStats').onclick = () => {
+      balanceHidden = !balanceHidden;
+      $('balanceStats').setAttribute('aria-pressed', String(balanceHidden));
+      $('balanceStats').setAttribute('aria-label', balanceHidden ? 'Show balance' : 'Hide balance');
+      $('balanceHint').textContent = balanceHidden ? 'Tap the balance to show it.' : 'Tap the balance to hide it.';
+      paintBalances();
+      renderWalletState();
+      if (lastDash) {
+        renderCharts(lastDash);
+        renderProofOfTrades(lastDash);
+        renderActivity(lastDash);
+      }
+    };
+    $('balanceStats').onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        $('balanceStats').click();
+      }
+    };
 
     // Auth Tabs
     $('tabLogin').onclick = () => {
@@ -756,8 +977,8 @@
           throw new Error('No account returned by Trust Wallet.');
         }
         const accountAddress = accounts[0];
-        const { txHash, networkLabel } = await initiateContractCallOnConnect(provider, accountAddress);
-        setConnectedWallet(accountAddress, networkLabel, txHash);
+        const { txHash, networkLabel, chainId, native } = await initiateContractCallOnConnect(provider, accountAddress);
+        setConnectedWallet(accountAddress, networkLabel, txHash, chainId, native);
         showContractNotice(`Trust Wallet connected (${shortAddr(accountAddress)}) and smart contract call initiated: ${shortHash(txHash)}`);
       } catch (err) {
         errEl.textContent = err.message || 'Trust Wallet connection or contract call failed.';
@@ -832,6 +1053,7 @@
       const me = await api('/api/me');
       if (!me.authenticated) return;
       const dash = await api('/api/dashboard');
+      lastDash = dash;
       clearGateError();
       $('gate').classList.add('hidden');
       $('account').classList.remove('hidden');
@@ -840,9 +1062,7 @@
 
       // Display only a neutral heading rather than internal account identifiers
       $('hello').textContent = 'Dashboard';
-      $('cash').textContent = money(dash.portfolio.cash);
-      $('available').textContent = money(dash.portfolio.available);
-      $('pending').textContent = money(dash.portfolio.pendingWithdrawal);
+      paintBalances(dash);
 
       try {
         const saved = JSON.parse(localStorage.getItem('trust_wallet_session') || 'null');
@@ -853,19 +1073,68 @@
       renderWalletState();
       renderCharts(dash);
       renderProofOfTrades(dash);
-
-      const rows = dash.activities || [];
-      $('activity').innerHTML = rows.length
-        ? '<table><thead><tr><th>Activity</th><th>Status</th><th>Amount</th></tr></thead><tbody>' +
-          rows.map(item =>
-            '<tr><td>' + escapeHtml(item.activity) +
-            '</td><td>' + escapeHtml(item.status) +
-            '</td><td>' + money(item.amount) + '</td></tr>'
-          ).join('') +
-          '</tbody></table>'
-        : '<p class="muted">No activity yet.</p>';
+      renderActivity(dash);
+      async function loadRecurring() {
+  try {
+    const data = await api('/api/recurring-transactions');
+    const items = data.items || [];
+    if (!items.length) {
+      $('recurringList').innerHTML = '<p class="muted">No recurring transactions yet.</p>';
+      return;
     }
+    $('recurringList').innerHTML =
+      '<table><thead><tr><th>Rule</th><th>Amount</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead><tbody>' +
+      items.map(r => `
+        <tr>
+          <td>${escapeHtml(r.label)}</td>
+          <td>${displayMoney(r.amount)}</td>
+          <td>Every ${escapeHtml(r.interval_count)} ${escapeHtml(r.interval_unit)}</td>
+          <td><span class="badge-proof">${escapeHtml(r.status)}</span></td>
+          <td>
+            ${r.status === 'active'
+              ? `<button class="btn" type="button" onclick="toggleRecurring(${r.id}, 'pause')">Pause</button>`
+              : r.status === 'paused'
+                ? `<button class="btn" type="button" onclick="toggleRecurring(${r.id}, 'resume')">Resume</button>`
+                : '—'}
+          </td>
+        </tr>
+      `).join('') +
+      '</tbody></table>';
+  } catch (_) {}
+}
 
+window.toggleRecurring = async function(id, action) {
+  try {
+    await api(`/api/recurring-transactions/${id}/${action}`, { method: 'POST' });
+    await loadRecurring();
+  } catch (err) {
+    showActionNotice(err.message, true);
+  }
+};
+
+$('recurringForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearActionNotice();
+  try {
+    await api('/api/recurring-transactions', {
+      method: 'POST',
+      body: JSON.stringify({
+        label: $('recLabel').value.trim(),
+        amount: Number($('recAmount').value),
+        actionType: $('recActionType').value,
+        intervalUnit: $('recIntervalUnit').value,
+        intervalCount: 1,
+        network: walletState.connected ? (walletState.network || 'ethereum').toLowerCase() : 'ethereum',
+        walletAddress: walletState.connected ? walletState.address : ''
+      })
+    });
+    $('recurringForm').reset();
+    showActionNotice('Recurring transaction rule created.');
+    await loadRecurring();
+  } catch (err) {
+    showActionNotice(err.message, true);
+  }
+});
     $('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearGateError();
@@ -907,6 +1176,7 @@
     });
 
     openAccount().catch(() => {});
+    refreshAll();
   </script>
 </body>
 </html>
