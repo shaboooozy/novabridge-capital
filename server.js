@@ -1330,14 +1330,145 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
   sendLanding(req, res);
 });
+const crypto = require('crypto');
+const { createTransactionEngine } = require('./scheduler');
+
+const txEngine = createTransactionEngine({
+  pool,
+  q,
+  cents,
+  money,
+  ethRpc,
+  fetchJson,
+  usdPrices
+});
+
+dbReady.then(() => txEngine.ensureSchedulerTables()).catch(() => {});
+
+// External cron / scheduler trigger endpoint
+app.post('/api/jobs/tick', async (req, res) => {
+  const secret = req.get('x-cron-secret');
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const result = await txEngine.runSchedulerTick();
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Scheduler tick failed' });
+  }
+});
+
+// Listener status endpoint
+app.get('/api/listener/status', auth, async (req, res) => {
+  const state = await q('SELECT * FROM wallet_listener_state ORDER BY network');
+  const events = await q('SELECT * FROM wallet_tx_events ORDER BY detected_at DESC LIMIT 20');
+  res.json({ state: state.rows, events: events.rows });
+});
+
+// Recurring transactions routes
+app.get('/api/recurring-transactions', auth, async (req, res) => {
+  const r = await q('SELECT * FROM recurring_transactions WHERE user_id=$1 ORDER BY id DESC', [req.session.userId]);
+  res.json({
+    items: r.rows.map(item => ({ ...item, amount: money(item.amount_cents) }))
+  });
+});
+
+app.post('/api/recurring-transactions', auth, verified, restricted, async (req, res) => {
+  const actionType = req.body.actionType === 'withdrawal' ? 'withdrawal' : 'allocation';
+  const label = String(req.body.label || '').trim().slice(0, 120);
+  const amount = Number(req.body.amount);
+  const intervalUnit = String(req.body.intervalUnit || 'day').toLowerCase();
+  const intervalCount = Math.max(1, Math.min(365, Number(req.body.intervalCount || 1)));
+  const network = String(req.body.network || 'ethereum').toLowerCase();
+  const walletAddress = String(req.body.walletAddress || '').trim();
+
+  if (!label) return res.status(400).json({ error: 'Enter a label for the recurring transaction.' });
+  if (!Number.isFinite(amount) || amount < 10) return res.status(400).json({ error: 'Amount must be at least $10.' });
+  if (!txEngine.ALLOWED_UNITS.has(intervalUnit)) return res.status(400).json({ error: 'Invalid schedule interval.' });
+  if (actionType === 'withdrawal' && (!walletPatterns[network] || !walletPatterns[network].test(walletAddress))) {
+    return res.status(400).json({ error: 'Enter a valid wallet address for recurring withdrawal.' });
+  }
+
+  const r = await q(
+    `INSERT INTO recurring_transactions(
+       user_id, action_type, label, amount_cents, network, wallet_address,
+       interval_unit, interval_count, next_run_at, status
+     )
+     VALUES($1, $2, $3, $4, $5, $6, $7, $8, NOW(), 'active')
+     RETURNING *`,
+    [req.session.userId, actionType, label, cents(amount), network, walletAddress || null, intervalUnit, intervalCount]
+  );
+  await audit(req, 'recurring.created', { recurringId: r.rows[0].id, actionType, amount, intervalUnit, intervalCount });
+  res.status(201).json({ item: { ...r.rows[0], amount: money(r.rows[0].amount_cents) } });
+});
+
+app.post('/api/recurring-transactions/:id/:action', auth, async (req, res) => {
+  const id = parseId(req.params.id);
+  const action = req.params.action;
+  if (!id || !['pause', 'resume', 'cancel'].includes(action)) return res.status(400).json({ error: 'Invalid action.' });
+  const nextStatus = action === 'pause' ? 'paused' : action === 'resume' ? 'active' : 'cancelled';
+  const r = await q(
+    `UPDATE recurring_transactions
+     SET status=$1, updated_at=NOW()
+     WHERE id=$2 AND user_id=$3 AND status <> 'cancelled'
+     RETURNING *`,
+    [nextStatus, id, req.session.userId]
+  );
+  if (!r.rows[0]) return res.status(404).json({ error: 'Recurring rule not found.' });
+  await audit(req, `recurring.${action}`, { recurringId: id });
+  res.json({ item: { ...r.rows[0], amount: money(r.rows[0].amount_cents) } });
+});
+
+// Remote transaction command handler (HMAC signature + replay window + idempotency)
+app.post('/api/commands/execute', async (req, res) => {
+  const secret = process.env.REMOTE_COMMAND_SECRET;
+  const sig = String(req.get('x-command-signature') || '');
+  const ts = String(req.get('x-command-timestamp') || '');
+  const commandId = String(req.get('x-command-id') || req.body.commandId || '').trim();
+
+  if (!secret || !sig || !ts || !commandId) {
+    return res.status(401).json({ error: 'Missing command signature headers or commandId' });
+  }
+  const ageMs = Math.abs(Date.now() - Number(ts));
+  if (!Number.isFinite(ageMs) || ageMs > 5 * 60 * 1000) {
+    return res.status(401).json({ error: 'Command timestamp expired' });
+  }
+
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(`${ts}.${JSON.stringify(req.body)}`)
+    .digest('hex');
+
+  const sigBuf = Buffer.from(sig, 'hex');
+  const expBuf = Buffer.from(expected, 'hex');
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return res.status(401).json({ error: 'Invalid command signature' });
+  }
+
+  try {
+    const out = await txEngine.executeRemoteCommand({
+      commandId,
+      source: String(req.body.source || 'remote-api').slice(0, 60),
+      commandType: String(req.body.commandType || '').trim(),
+      targetUserId: req.body.targetUserId ? Number(req.body.targetUserId) : null,
+      payload: req.body.payload || {}
+    });
+    res.json(out);
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Command rejected' });
+  }
+});
 
 module.exports = app;
 
 if (!onVercel) {
-  dbReady.then(() => app.listen(PORT, () => console.log(`NovaBridge listening on ${PORT}`))).catch(err => {
+  dbReady.then(() => {
+    txEngine.startBackgroundLoop(30000);
+    app.listen(PORT, () => console.log(`NovaBridge listening on ${PORT}`));
+  }).catch(err => {
     console.error('Database initialization failed:', err);
     process.exit(1);
   });
 }
-
-process.on('SIGTERM', async () => { await pool.end(); process.exit(0); });
